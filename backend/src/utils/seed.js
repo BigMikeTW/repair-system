@@ -1,4 +1,3 @@
-require('dotenv').config({ path: '../.env' });
 const bcrypt = require('bcryptjs');
 const { pool } = require('../config/database');
 
