@@ -13,6 +13,9 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const server = http.createServer(app);
 
+// Trust Railway's proxy (fixes X-Forwarded-For rate limit warning)
+app.set('trust proxy', 1);
+
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'], credentials: false }
 });
