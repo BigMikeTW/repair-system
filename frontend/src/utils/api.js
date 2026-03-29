@@ -2,7 +2,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: 'https://repair-system-production-cf5b.up.railway.app/api',
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' }
 });
