@@ -76,13 +76,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="mt-4 card p-3">
-          <p className="text-xs text-gray-500 font-medium mb-2">測試帳號</p>
-          <div className="space-y-1 text-xs text-gray-500">
-            <div>管理員：admin@repairsystem.com / Admin@123456</div>
-            <div>工程師：chang@repairsystem.com / Engineer@123</div>
-            <div>業主：owner@tsmc.com / Owner@123</div>
-          </div>
         </div>
       </div>
     </div>
