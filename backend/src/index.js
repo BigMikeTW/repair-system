@@ -50,6 +50,7 @@ app.use('/api/chat', require('./routes/chat'));
 app.use('/api/finance', require('./routes/finance'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/backup', require('./routes/backup'));
+app.use('/api/case-types', require('./routes/caseTypes'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
