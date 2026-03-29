@@ -1,5 +1,5 @@
 require('dotenv').config({ path: '../.env' });
-const { pool } = require('../config/database');
+const { pool } = require('../../config/database');
 
 const createTables = async () => {
   const client = await pool.connect();
