@@ -4,7 +4,7 @@ import { useQuery } from 'react-query';
 import {
   LayoutDashboard, ClipboardList, Users, Wrench, MessageSquare,
   FileText, CreditCard, Shield, Database, LogOut, Bell, ChevronLeft,
-  User, Settings, Menu, X, Hammer
+  Settings, Menu, Hammer, Tag
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { usersAPI } from '../utils/api';
@@ -39,7 +39,7 @@ const navConfig = [
     section: '系統管理',
     items: [
       { to: '/users', icon: Shield, label: '人員管理', roles: ['admin'] },
-      { to: '/case-types', icon: Settings, label: '報修類型', roles: ['admin','customer_service'] },
+      { to: '/case-types', icon: Tag, label: '報修類型', roles: ['admin','customer_service'] },
       { to: '/backup', icon: Database, label: '備份記錄', roles: ['admin'] },
     ]
   }
@@ -87,7 +87,6 @@ export default function Layout() {
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
-      {/* Logo */}
       <div className="px-4 py-4 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
@@ -102,7 +101,6 @@ export default function Layout() {
         </div>
       </div>
 
-      {/* Nav */}
       <div className="flex-1 overflow-y-auto py-3">
         {visibleNav.map(section => (
           <div key={section.section} className="mb-3">
@@ -129,7 +127,6 @@ export default function Layout() {
         ))}
       </div>
 
-      {/* User info */}
       <div className="border-t border-gray-100 p-3">
         {!collapsed ? (
           <div className="flex items-center gap-2.5 px-2 py-2">
@@ -160,12 +157,10 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Desktop sidebar */}
       <aside className={`hidden md:flex flex-col bg-white border-r border-gray-100 transition-all duration-300 ${collapsed ? 'w-14' : 'w-52'}`}>
         <SidebarContent />
       </aside>
 
-      {/* Mobile sidebar overlay */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
@@ -175,9 +170,7 @@ export default function Layout() {
         </div>
       )}
 
-      {/* Main */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        {/* Topbar */}
         <header className="h-12 bg-white border-b border-gray-100 flex items-center justify-between px-4 flex-shrink-0">
           <div className="flex items-center gap-2">
             <button className="md:hidden p-1.5 hover:bg-gray-100 rounded" onClick={() => setMobileOpen(true)}>
@@ -211,7 +204,6 @@ export default function Layout() {
           </div>
         </header>
 
-        {/* Page content */}
         <main className="flex-1 overflow-y-auto">
           <Outlet />
         </main>

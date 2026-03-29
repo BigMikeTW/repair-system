@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm } from 'react-hook-form';
-import { UserPlus, Edit2, UserX } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { UserPlus, Edit2, UserX, FileText } from 'lucide-react';
 import { usersAPI } from '../utils/api';
 import { ROLE_LABELS, ROLE_BADGES, formatDateTime } from '../utils/helpers';
 import toast from 'react-hot-toast';
@@ -30,7 +31,7 @@ function UserModal({ user: editUser, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl w-full max-w-md">
+      <div className="bg-white rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900">{isEdit ? '編輯人員' : '新增人員'}</h2>
           <button className="btn btn-sm" onClick={onClose}>關閉</button>
@@ -56,7 +57,8 @@ function UserModal({ user: editUser, onClose, onSuccess }) {
             </div>
             <div>
               <label className="form-label">{isEdit ? '新密碼（留空不變）' : '密碼 *（至少8碼）'}</label>
-              <input {...register('password', { required: !isEdit, minLength: isEdit ? 0 : 8 })} className="form-control" type="password" placeholder="••••••••" />
+              <input {...register('password', { required: !isEdit, minLength: isEdit ? 0 : 8 })}
+                className="form-control" type="password" placeholder="••••••••" />
               {errors.password && <p className="text-xs text-danger mt-1">密碼至少 8 碼</p>}
             </div>
             <div>
@@ -110,23 +112,21 @@ export default function UsersPage() {
 
   const deactivate = useMutation(
     (id) => usersAPI.deactivate(id),
-    {
-      onSuccess: () => { toast.success('帳號已停用'); qc.invalidateQueries('users'); }
-    }
+    { onSuccess: () => { toast.success('帳號已停用'); qc.invalidateQueries('users'); } }
   );
-
-  const openEdit = (u) => { setEditUser(u); setShowModal(true); };
-  const openCreate = () => { setEditUser(null); setShowModal(true); };
 
   return (
     <div className="page-container">
       <div className="page-header">
         <h1 className="page-title">人員管理</h1>
-        <button className="btn btn-primary" onClick={openCreate}><UserPlus size={14} /> 新增人員</button>
+        <button className="btn btn-primary" onClick={() => { setEditUser(null); setShowModal(true); }}>
+          <UserPlus size={14} /> 新增人員
+        </button>
       </div>
 
       <div className="filter-bar">
-        <input className="form-control w-48" placeholder="搜尋姓名或 Email..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="form-control w-48" placeholder="搜尋姓名或 Email..."
+          value={search} onChange={e => setSearch(e.target.value)} />
         <select className="form-select w-auto" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
           <option value="">全部角色</option>
           {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -155,15 +155,16 @@ export default function UsersPage() {
                 <td className="text-xs text-gray-400 max-w-[140px]">
                   <div className="truncate">{u.specialties?.join(', ') || '--'}</div>
                 </td>
-                <td>
-                  <span className={`badge ${u.is_active ? 'badge-success' : 'badge-gray'}`}>
-                    {u.is_active ? '啟用' : '停用'}
-                  </span>
-                </td>
+                <td><span className={`badge ${u.is_active ? 'badge-success' : 'badge-gray'}`}>{u.is_active ? '啟用' : '停用'}</span></td>
                 <td className="text-xs text-gray-400">{formatDateTime(u.last_login)}</td>
                 <td>
                   <div className="flex gap-1">
-                    <button className="btn btn-sm" onClick={() => openEdit(u)}><Edit2 size={12} /></button>
+                    <Link to={`/users/${u.id}`} className="btn btn-sm gap-1 text-xs">
+                      <FileText size={12} /> 詳情
+                    </Link>
+                    <button className="btn btn-sm" onClick={() => { setEditUser(u); setShowModal(true); }}>
+                      <Edit2 size={12} />
+                    </button>
                     {u.is_active && (
                       <button className="btn btn-sm text-danger hover:bg-danger-light"
                         onClick={() => { if (window.confirm(`確定要停用 ${u.name} 的帳號？`)) deactivate.mutate(u.id); }}>

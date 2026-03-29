@@ -15,9 +15,10 @@ import SignPage from './pages/SignPage';
 import FinancePage from './pages/FinancePage';
 import PaymentPage from './pages/PaymentPage';
 import UsersPage from './pages/UsersPage';
+import UserDetailPage from './pages/UserDetailPage';
 import BackupPage from './pages/BackupPage';
-import CaseTypesPage from './pages/CaseTypesPage';
 import ProfilePage from './pages/ProfilePage';
+import CaseTypesPage from './pages/CaseTypesPage';
 
 const PrivateRoute = ({ children, roles }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -47,8 +48,9 @@ export default function App() {
         <Route path="finance" element={<PrivateRoute roles={['admin','customer_service']}><FinancePage /></PrivateRoute>} />
         <Route path="payments" element={<PrivateRoute roles={['admin','customer_service']}><PaymentPage /></PrivateRoute>} />
         <Route path="users" element={<PrivateRoute roles={['admin']}><UsersPage /></PrivateRoute>} />
-        <Route path="backup" element={<PrivateRoute roles={['admin']}><BackupPage /></PrivateRoute>} />
+        <Route path="users/:id" element={<PrivateRoute roles={['admin','customer_service']}><UserDetailPage /></PrivateRoute>} />
         <Route path="case-types" element={<PrivateRoute roles={['admin','customer_service']}><CaseTypesPage /></PrivateRoute>} />
+        <Route path="backup" element={<PrivateRoute roles={['admin']}><BackupPage /></PrivateRoute>} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
 

@@ -1,10 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { useQuery } from 'react-query';
 import { ArrowLeft } from 'lucide-react';
 import { casesAPI } from '../utils/api';
-import { CASE_TYPES } from '../utils/helpers';
-import { useQuery } from 'react-query';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
@@ -13,7 +12,10 @@ export default function NewCasePage() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     defaultValues: { urgency: 'normal' }
   });
-  const { data: caseTypes } = useQuery('caseTypes', () => api.get('/case-types').then(r => r.data));
+
+  const { data: caseTypes } = useQuery('caseTypes', () =>
+    api.get('/case-types').then(r => r.data)
+  );
 
   const onSubmit = async (data) => {
     try {
@@ -44,7 +46,9 @@ export default function NewCasePage() {
               <label className="form-label">報修類型 *</label>
               <select {...register('case_type', { required: '請選擇類型' })} className="form-select">
                 <option value="">選擇類型</option>
-                {caseTypes?.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
+                {caseTypes?.map(t => (
+                  <option key={t.id} value={t.name}>{t.name}</option>
+                ))}
               </select>
               {errors.case_type && <p className="text-xs text-danger mt-1">{errors.case_type.message}</p>}
             </div>
