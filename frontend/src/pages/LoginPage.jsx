@@ -75,8 +75,6 @@ export default function LoginPage() {
             <Link to="/register" className="text-primary hover:underline font-medium">立即註冊</Link>
           </div>
         </div>
-
-        </div>
       </div>
     </div>
   );
