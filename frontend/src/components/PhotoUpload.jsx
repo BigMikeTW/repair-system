@@ -1,67 +1,73 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
+import { useMutation, useQueryClient } from 'react-query';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, Image } from 'lucide-react';
+import { Upload, Camera } from 'lucide-react';
 import { photosAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 
-export default function PhotoUpload({ caseId, phase, onSuccess }) {
-  const [uploading, setUploading] = useState(false);
-  const [previews, setPreviews] = useState([]);
+const BACKEND_URL = 'https://repair-system-production-cf5b.up.railway.app';
 
-  const onDrop = useCallback(async (acceptedFiles) => {
-    if (!acceptedFiles.length) return;
-    setUploading(true);
-    const newPreviews = acceptedFiles.map(f => ({ url: URL.createObjectURL(f), name: f.name }));
-    setPreviews(prev => [...prev, ...newPreviews]);
-    try {
+const fullUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${BACKEND_URL}${url}`;
+};
+
+export default function PhotoUpload({ caseId, phase, onSuccess }) {
+  const qc = useQueryClient();
+
+  const uploadMutation = useMutation(
+    (files) => {
       const fd = new FormData();
-      acceptedFiles.forEach(f => fd.append('photos', f));
       fd.append('phase', phase);
-      await photosAPI.upload(caseId, fd);
-      toast.success(`${acceptedFiles.length} 張照片已上傳`);
-      onSuccess?.();
-    } catch {
-      setPreviews(prev => prev.filter(p => !newPreviews.includes(p)));
-    } finally {
-      setUploading(false);
+      files.forEach(f => fd.append('photos', f));
+      return photosAPI.upload(caseId, fd);
+    },
+    {
+      onSuccess: (res) => {
+        const count = res.data.photos?.length || 0;
+        toast.success(`已上傳 ${count} 張照片`);
+        qc.invalidateQueries(['case', caseId]);
+        onSuccess?.();
+      },
+      onError: () => toast.error('上傳失敗，請重試')
     }
-  }, [caseId, phase, onSuccess]);
+  );
+
+  const onDrop = useCallback((acceptedFiles) => {
+    if (acceptedFiles.length > 0) uploadMutation.mutate(acceptedFiles);
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'image/*': ['.jpg', '.jpeg', '.png', '.webp', '.heic'] },
-    multiple: true,
-    maxSize: 10 * 1024 * 1024,
-    disabled: uploading
+    maxFiles: 10,
+    disabled: uploadMutation.isLoading
   });
 
   return (
-    <div>
-      {previews.length > 0 && (
-        <div className="grid grid-cols-4 gap-2 mb-3">
-          {previews.map((p, i) => (
-            <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-gray-100">
-              <img src={p.url} alt={p.name} className="w-full h-full object-cover" />
-              <button className="absolute top-0.5 right-0.5 w-4 h-4 bg-black/50 rounded-full flex items-center justify-center"
-                onClick={() => setPreviews(prev => prev.filter((_, j) => j !== i))}>
-                <X size={9} className="text-white" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-      <div
-        {...getRootProps()}
-        className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors
-          ${isDragActive ? 'border-primary bg-primary-light' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}
-          ${uploading ? 'opacity-50 cursor-wait' : ''}`}
-      >
-        <input {...getInputProps()} />
-        <Upload size={18} className={`mx-auto mb-2 ${isDragActive ? 'text-primary' : 'text-gray-300'}`} />
-        <p className="text-xs text-gray-400">
-          {uploading ? '上傳中...' : isDragActive ? '放開以上傳' : '點擊或拖曳照片至此上傳'}
-        </p>
-        <p className="text-[10px] text-gray-300 mt-0.5">支援 JPG, PNG, WebP · 最大 10MB</p>
+    <div
+      {...getRootProps()}
+      className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-colors ${
+        isDragActive ? 'border-primary bg-primary-light' : 'border-gray-200 hover:border-primary hover:bg-primary-light/30'
+      } ${uploadMutation.isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+    >
+      <input {...getInputProps()} />
+      <div className="flex flex-col items-center gap-2">
+        {uploadMutation.isLoading ? (
+          <>
+            <Upload size={20} className="text-primary animate-bounce" />
+            <span className="text-sm text-primary">上傳中...</span>
+          </>
+        ) : (
+          <>
+            <Camera size={18} className="text-gray-400" />
+            <span className="text-sm text-gray-500">
+              {isDragActive ? '放開以上傳照片' : '點擊或拖曳照片至此上傳'}
+            </span>
+            <span className="text-xs text-gray-400">支援 JPG, PNG, WebP · 最大 10MB</span>
+          </>
+        )}
       </div>
     </div>
   );
