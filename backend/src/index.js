@@ -13,11 +13,10 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const server = http.createServer(app);
 
-// Trust Railway's proxy (fixes X-Forwarded-For rate limit warning)
 app.set('trust proxy', 1);
 
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'], credentials: false }
+  cors: { origin: '*', methods: ['GET','POST'], credentials: false }
 });
 
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -27,23 +26,24 @@ app.use(cors({ origin: '*', credentials: false }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, message: { error: '請求過於頻繁，請稍後再試' } });
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: '登入嘗試過多，請 15 分鐘後再試' } });
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, message: { error: '請求過於頻繁' } });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, message: { error: '登入嘗試過多' } });
 app.use('/api', limiter);
 app.use('/api/auth/login', authLimiter);
 
 app.use('/uploads', express.static(path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads')));
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/cases', require('./routes/cases'));
-app.use('/api/photos', require('./routes/photos'));
-app.use('/api/chat', require('./routes/chat'));
-app.use('/api/finance', require('./routes/finance'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/backup', require('./routes/backup'));
+app.use('/api/auth',       require('./routes/auth'));
+app.use('/api/cases',      require('./routes/cases'));
+app.use('/api/photos',     require('./routes/photos'));
+app.use('/api/chat',       require('./routes/chat'));
+app.use('/api/finance',    require('./routes/finance'));
+app.use('/api/users',      require('./routes/users'));
+app.use('/api/backup',     require('./routes/backup'));
 app.use('/api/case-types', require('./routes/caseTypes'));
-app.use('/api/hr', require('./routes/hr'));
+app.use('/api/hr',         require('./routes/hr'));
+app.use('/api/case-notes', require('./routes/caseNotes'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
@@ -75,38 +75,27 @@ io.use(async (socket, next) => {
 
 io.on('connection', (socket) => {
   connectedUsers.set(socket.userId, socket.id);
-  console.log(`User connected: ${socket.userId}`);
-
   socket.on('join_case', (caseId) => socket.join(`case:${caseId}`));
   socket.on('leave_case', (caseId) => socket.leave(`case:${caseId}`));
-
   socket.on('send_message', async (data) => {
     const { caseId, message, senderName, senderRole } = data;
     try {
       const { query } = require('./config/database');
-      const result = await query(`
-        INSERT INTO chat_messages (case_id, sender_id, sender_name, sender_role, message)
-        VALUES ($1,$2,$3,$4,$5) RETURNING *
-      `, [caseId, socket.userId, senderName, senderRole, message]);
+      const result = await query(
+        `INSERT INTO chat_messages (case_id, sender_id, sender_name, sender_role, message) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [caseId, socket.userId, senderName, senderRole, message]
+      );
       io.to(`case:${caseId}`).emit('new_message', result.rows[0]);
     } catch (err) {
       socket.emit('error', { message: '訊息發送失敗' });
     }
   });
-
-  socket.on('case_updated', (data) => {
-    io.to(`case:${data.caseId}`).emit('case_status_changed', data);
-  });
-
+  socket.on('case_updated', (data) => io.to(`case:${data.caseId}`).emit('case_status_changed', data));
   socket.on('notify_user', (data) => {
     const targetSocketId = connectedUsers.get(data.userId);
     if (targetSocketId) io.to(targetSocketId).emit('notification', data);
   });
-
-  socket.on('disconnect', () => {
-    connectedUsers.delete(socket.userId);
-    console.log(`User disconnected: ${socket.userId}`);
-  });
+  socket.on('disconnect', () => { connectedUsers.delete(socket.userId); });
 });
 
 app.set('io', io);
@@ -117,8 +106,6 @@ const scheduleAutoBackup = () => {
   const next2am = new Date();
   next2am.setHours(2, 0, 0, 0);
   if (now >= next2am) next2am.setDate(next2am.getDate() + 1);
-  const delay = next2am - now;
-
   setTimeout(async () => {
     try {
       const { exec } = require('child_process');
@@ -136,13 +123,12 @@ const scheduleAutoBackup = () => {
       });
     } catch (e) { console.error('Auto backup error:', e); }
     scheduleAutoBackup();
-  }, delay);
+  }, next2am - now);
 };
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📋 API: http://localhost:${PORT}/api`);
   if (process.env.NODE_ENV !== 'test') scheduleAutoBackup();
 });
 

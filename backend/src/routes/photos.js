@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const { query } = require('../../config/database');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { syncCasePhotosToDrive } = require('../utils/googleDrive');
 
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -22,15 +23,12 @@ const storage = multer.diskStorage({
   }
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/heic'];
-  if (allowed.includes(file.mimetype)) cb(null, true);
-  else cb(new Error('只支援 JPEG, PNG, WebP, HEIC 格式'));
-};
-
 const upload = multer({
   storage,
-  fileFilter,
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg','image/png','image/webp','image/heic'];
+    allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('只支援 JPEG, PNG, WebP, HEIC 格式'));
+  },
   limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024 }
 });
 
@@ -41,6 +39,10 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
     return res.status(400).json({ error: '無效施工階段 (before/during/after)' });
   }
 
+  // 取得案件編號（用於 Drive 資料夾命名）
+  const caseResult = await query('SELECT case_number FROM cases WHERE id=$1', [req.params.caseId]);
+  const caseNumber = caseResult.rows[0]?.case_number || req.params.caseId;
+
   const uploaded = [];
   for (const file of req.files) {
     const fileUrl = `/uploads/${req.params.caseId}/${file.filename}`;
@@ -49,6 +51,27 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *
     `, [req.params.caseId, req.user.id, phase, fileUrl, file.originalname, file.size]);
     uploaded.push(result.rows[0]);
+  }
+
+  // 非同步上傳到 Google Drive
+  if (process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID && process.env.GOOGLE_SERVICE_ACCOUNT_JSON && uploaded.length > 0) {
+    setImmediate(async () => {
+      try {
+        const results = await syncCasePhotosToDrive(caseNumber, uploaded);
+        // 更新 Drive 連結到資料庫
+        for (const r of results) {
+          if (r.driveId) {
+            await query(
+              `UPDATE case_photos SET drive_id=$1, drive_link=$2, drive_synced_at=NOW() WHERE id=$3`,
+              [r.driveId, r.driveLink, r.photoId]
+            );
+          }
+        }
+        console.log(`✅ ${uploaded.length} photos synced to Drive for case ${caseNumber}`);
+      } catch (err) {
+        console.error('Drive sync error:', err.message);
+      }
+    });
   }
 
   await query(`
