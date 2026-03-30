@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import {
   LayoutDashboard, ClipboardList, Users, Wrench, MessageSquare,
-  FileText, CreditCard, Shield, Database, LogOut, Bell, ChevronLeft,
+  FileText, Shield, Database, LogOut, Bell, ChevronLeft,
   Settings, Menu, Hammer, Tag
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
@@ -31,8 +31,7 @@ const navConfig = [
   {
     section: '財務管理',
     items: [
-      { to: '/finance', icon: FileText, label: '報價/結案單', roles: ['admin','customer_service'] },
-      { to: '/payments', icon: CreditCard, label: '請款記錄', roles: ['admin','customer_service'] },
+      { to: '/finance', icon: FileText, label: '帳務處理', roles: ['admin','customer_service'] },
     ]
   },
   {
