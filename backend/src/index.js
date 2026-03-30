@@ -9,6 +9,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const { query } = require('../config/database');
 
 const app = express();
 const server = http.createServer(app);
@@ -76,7 +77,6 @@ io.on('connection', (socket) => {
   socket.on('leave_case', (caseId) => socket.leave(`case:${caseId}`));
   socket.on('send_message', async ({ caseId, message, senderName, senderRole }) => {
     try {
-      const { query } = require('./config/database');
       const result = await query(
         `INSERT INTO chat_messages (case_id, sender_id, sender_name, sender_role, message) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
         [caseId, socket.userId, senderName, senderRole, message]
@@ -105,14 +105,14 @@ const scheduleAutoBackup = () => {
     try {
       const { exec } = require('child_process');
       const fs = require('fs');
-      const { query } = require('./config/database');
       const backupDir = path.join(process.cwd(), 'backups');
       if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
       const filename = `auto_backup_${new Date().toISOString().replace(/[:.]/g,'-')}.sql`;
       const filepath = path.join(backupDir, filename);
       const cmd = `PGPASSWORD="${process.env.DB_PASSWORD}" pg_dump -h ${process.env.DB_HOST} -U ${process.env.DB_USER} -d ${process.env.DB_NAME} -F p -f "${filepath}"`;
       exec(cmd, async (err) => {
-        const fileSize = fs.existsSync(filepath) ? fs.statSync(filepath).size : 0;
+        const fs2 = require('fs');
+        const fileSize = fs2.existsSync(filepath) ? fs2.statSync(filepath).size : 0;
         await query(
           `INSERT INTO backup_logs (backup_type, file_name, file_size, status, error_message) VALUES ('auto',$1,$2,$3,$4)`,
           [filename, fileSize, err ? 'failed' : 'success', err ? err.message : null]
@@ -125,7 +125,6 @@ const scheduleAutoBackup = () => {
 
 // ── Auto Migration ────────────────────────────────────────────
 const runMigrations = async () => {
-  const { query } = require('./config/database');
   try {
     await query(`
       CREATE TABLE IF NOT EXISTS closure_reports (
@@ -133,7 +132,8 @@ const runMigrations = async () => {
         closure_number VARCHAR(20) UNIQUE NOT NULL,
         case_id INTEGER REFERENCES cases(id) ON DELETE SET NULL,
         created_by INTEGER REFERENCES users(id),
-        summary TEXT, notes TEXT,
+        summary TEXT,
+        notes TEXT,
         status VARCHAR(20) DEFAULT 'issued',
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -161,6 +161,7 @@ const runMigrations = async () => {
   }
 };
 
+// ── Start Server ──────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
