@@ -21,6 +21,8 @@ import BackupPage from './pages/BackupPage';
 import ProfilePage from './pages/ProfilePage';
 import CaseTypesPage from './pages/CaseTypesPage';
 import PermissionsPage from './pages/PermissionsPage';
+import PublicReportPage from './pages/PublicReportPage';
+import PublicTrackPage from './pages/PublicTrackPage';
 
 const PrivateRoute = ({ children, roles }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -55,6 +57,10 @@ export default function App() {
         <Route path="backup" element={<PrivateRoute roles={['admin']}><BackupPage /></PrivateRoute>} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
+      {/* 公開頁面（不需登入）*/}
+      <Route path="/public/report" element={<PublicReportPage />} />
+      <Route path="/track" element={<PublicTrackPage />} />
+      <Route path="/track/:caseNumber" element={<PublicTrackPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

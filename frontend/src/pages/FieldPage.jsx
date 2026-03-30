@@ -299,10 +299,21 @@ export default function FieldPage() {
     setGpsLoading(true);
     if (!navigator.geolocation) { toast.error('裝置不支援 GPS'); setGpsLoading(false); return; }
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         setGpsLoading(false);
         const { latitude: lat, longitude: lng } = pos.coords;
-        checkinMutation.mutate({ type, lat, lng, address: `GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}` });
+        let address = `GPS: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        // 嘗試反向地理編碼取得中文地址
+        try {
+          const geoRes = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=zh-TW`
+          );
+          const geoData = await geoRes.json();
+          if (geoData.display_name) {
+            address = geoData.display_name.split(',').slice(0,4).join(', ');
+          }
+        } catch {}
+        checkinMutation.mutate({ type, lat, lng, address });
       },
       () => { setGpsLoading(false); toast.error('無法取得 GPS 位置，請確認定位權限'); },
       { enableHighAccuracy: true, timeout: 10000 }

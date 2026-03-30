@@ -45,6 +45,7 @@ app.use('/api/backup',     require('./routes/backup'));
 app.use('/api/case-types', require('./routes/caseTypes'));
 app.use('/api/hr',         require('./routes/hr'));
 app.use('/api/case-notes', require('./routes/caseNotes'));
+app.use('/api/line',       require('./routes/line'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
@@ -155,6 +156,11 @@ const runMigrations = async () => {
       )
     `);
     await query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS tax_rate NUMERIC(5,2) DEFAULT 5`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS line_user_id VARCHAR(50)`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS line_bind_token VARCHAR(20)`);
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS line_bind_token_expires TIMESTAMPTZ`);
+    await query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS owner_line_id VARCHAR(50)`);
+    await query(`ALTER TABLE cases ADD COLUMN IF NOT EXISTS source VARCHAR(20) DEFAULT 'internal'`);
     console.log('✅ Database migrations completed');
   } catch (e) {
     console.error('⚠️ Migration warning:', e.message);

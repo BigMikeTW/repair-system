@@ -1,0 +1,18 @@
+{
+  "name": "Signify 工程報修管理系統",
+  "short_name": "工程報修",
+  "description": "Signify 工程報修管理系統",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1A1A2E",
+  "theme_color": "#FF6B00",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "shortcuts": [
+    { "name": "現場作業", "url": "/field", "description": "工程師現場作業" },
+    { "name": "派工管理", "url": "/dispatch", "description": "派工管理" }
+  ]
+}

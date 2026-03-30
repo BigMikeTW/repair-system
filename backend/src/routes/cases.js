@@ -5,6 +5,7 @@ const { query } = require('../../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { uploadSignature, uploadPdf, createCaseFolderStructure, isDropboxEnabled } = require('../utils/dropbox');
+const { notifyOwner, notifyEngineer } = require('../utils/lineService');
 
 const generateCaseNumber = async () => {
   const year = new Date().getFullYear();
@@ -104,6 +105,55 @@ const generateClosurePdf = async (c, notes) => {
     doc.end();
   });
 };
+
+
+// ── 公開 API（不需登入）─────────────────────────────────────
+
+// POST /api/cases/public - 客戶自助報修
+router.post('/public', asyncHandler(async (req, res) => {
+  const { title, description, case_type, urgency, location_address,
+    owner_name, owner_phone, owner_company } = req.body;
+
+  if (!title || !description || !case_type || !location_address || !owner_name || !owner_phone) {
+    return res.status(400).json({ error: '標題、說明、類型、地址、姓名、電話為必填' });
+  }
+
+  const caseNumber = await generateCaseNumber();
+  const result = await query(`
+    INSERT INTO cases (case_number, title, description, case_type, urgency,
+      location_address, owner_name, owner_phone, owner_company, source)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'public') RETURNING *
+  `, [caseNumber, title, description, case_type, urgency || 'normal',
+      location_address, owner_name, owner_phone, owner_company || null]);
+
+  const newCase = result.rows[0];
+  await addActivity(newCase.id, null, owner_name, 'created', `客戶自助報修：${caseNumber} 已建立`);
+
+  res.status(201).json({ case_number: newCase.case_number, id: newCase.id, status: newCase.status });
+}));
+
+// GET /api/cases/track/:caseNumber - 公開案件追蹤
+router.get('/track/:caseNumber', asyncHandler(async (req, res) => {
+  const result = await query(`
+    SELECT c.case_number, c.title, c.status, c.urgency, c.case_type,
+      c.location_address, c.created_at, c.scheduled_start, c.signed_at,
+      c.checkin_time, c.checkout_time,
+      u.name as engineer_name
+    FROM cases c
+    LEFT JOIN users u ON c.assigned_engineer_id = u.id
+    WHERE c.case_number = $1
+  `, [req.params.caseNumber.toUpperCase()]);
+
+  if (!result.rows.length) return res.status(404).json({ error: '案件不存在' });
+
+  const activities = await query(`
+    SELECT description, created_at, action FROM case_activities
+    WHERE case_id = (SELECT id FROM cases WHERE case_number = $1)
+    ORDER BY created_at DESC LIMIT 10
+  `, [req.params.caseNumber.toUpperCase()]);
+
+  res.json({ ...result.rows[0], activities: activities.rows });
+}));
 
 // GET /api/cases
 router.get('/', authenticate, asyncHandler(async (req, res) => {
@@ -280,6 +330,27 @@ router.put('/:id/assign', authenticate, authorize('admin','customer_service'), a
   await addNotification(engineer_id, '新任務指派',
     `您有新的工程任務：${result.rows[0].case_number} - ${result.rows[0].title}`, 'info', req.params.id);
 
+  // LINE 通知：推播給業主和工程師
+  setImmediate(async () => {
+    try {
+      const caseDetail = await query(`
+        SELECT c.*, u.name as engineer_name, u.line_user_id as engineer_line_id,
+          ow.line_user_id as owner_line_id
+        FROM cases c
+        LEFT JOIN users u ON c.assigned_engineer_id = u.id
+        LEFT JOIN users ow ON c.owner_id = ow.id
+        WHERE c.id = $1
+      `, [req.params.id]);
+      const cd = caseDetail.rows[0];
+      if (cd) {
+        await notifyOwner({ ...cd, owner_line_id: cd.owner_line_id }, 'dispatched');
+        if (cd.engineer_line_id) {
+          await notifyEngineer(cd, cd.engineer_line_id, cd.engineer_name);
+        }
+      }
+    } catch(e) { console.error('LINE notify error:', e.message); }
+  });
+
   res.json(result.rows[0]);
 }));
 
@@ -305,6 +376,20 @@ router.post('/:id/checkin', authenticate, authorize('engineer'), asyncHandler(as
     { latitude, longitude, address }
   );
 
+  // LINE 通知業主：工程師到場
+  if (type === 'checkin') {
+    setImmediate(async () => {
+      try {
+        const cd = await query(`
+          SELECT c.*, u.name as engineer_name, ow.line_user_id as owner_line_id
+          FROM cases c LEFT JOIN users u ON c.assigned_engineer_id=u.id
+          LEFT JOIN users ow ON c.owner_id=ow.id WHERE c.id=$1
+        `, [req.params.id]);
+        if (cd.rows[0]?.owner_line_id) await notifyOwner(cd.rows[0], 'in_progress');
+      } catch(e) { console.error('LINE checkin notify error:', e.message); }
+    });
+  }
+
   res.json({ message: type === 'checkin' ? '到場打卡成功' : '離場打卡成功' });
 }));
 
@@ -326,6 +411,18 @@ router.post('/:id/sign', authenticate, asyncHandler(async (req, res) => {
 
   await addActivity(req.params.id, req.user.id, req.user.name, 'signed',
     `業主 ${signed_by.trim()} 已簽名確認完工`);
+
+  // LINE 通知業主：工程完成
+  setImmediate(async () => {
+    try {
+      const cd = await query(`
+        SELECT c.*, u.name as engineer_name, ow.line_user_id as owner_line_id
+        FROM cases c LEFT JOIN users u ON c.assigned_engineer_id=u.id
+        LEFT JOIN users ow ON c.owner_id=ow.id WHERE c.id=$1
+      `, [req.params.id]);
+      if (cd.rows[0]?.owner_line_id) await notifyOwner(cd.rows[0], 'completed');
+    } catch(e) { console.error('LINE sign notify error:', e.message); }
+  });
 
   // 非同步：上傳簽名圖片和 PDF 到 Dropbox
   if (isDropboxEnabled()) {
