@@ -1,23 +1,84 @@
 /**
- * Dropbox 工具模組
- * 取代原本的 googleDrive.js
- * 需要 Railway 環境變數：DROPBOX_ACCESS_TOKEN
+ * Dropbox 工具模組（使用 Refresh Token，長期有效）
+ * Railway 環境變數需要：
+ *   DROPBOX_APP_KEY
+ *   DROPBOX_APP_SECRET
+ *   DROPBOX_REFRESH_TOKEN
  */
 
 const https = require('https');
 const path = require('path');
 const fs = require('fs');
-const stream = require('stream');
 
 const BASE_FOLDER = '/工程報修系統';
 
-// ── 呼叫 Dropbox API（通用） ─────────────────────────────────
-const dropboxRequest = (endpoint, body, isUpload = false, buffer = null) => {
-  return new Promise((resolve, reject) => {
-    const token = process.env.DROPBOX_ACCESS_TOKEN;
-    if (!token) return reject(new Error('DROPBOX_ACCESS_TOKEN not set'));
+// ── Access Token 快取（每次重啟或過期後自動換新） ────────────
+let cachedAccessToken = null;
+let tokenExpiresAt = 0;
 
+const getAccessToken = () => {
+  return new Promise((resolve, reject) => {
+    const appKey = process.env.DROPBOX_APP_KEY;
+    const appSecret = process.env.DROPBOX_APP_SECRET;
+    const refreshToken = process.env.DROPBOX_REFRESH_TOKEN;
+
+    if (!appKey || !appSecret || !refreshToken) {
+      return reject(new Error('Dropbox 環境變數未設定（需要 DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN）'));
+    }
+
+    // 若 token 仍有效（還有 5 分鐘以上），直接回傳
+    if (cachedAccessToken && Date.now() < tokenExpiresAt - 300000) {
+      return resolve(cachedAccessToken);
+    }
+
+    // 用 Refresh Token 換新的 Access Token
+    const body = `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`;
+    const creds = Buffer.from(`${appKey}:${appSecret}`).toString('base64');
+
+    const options = {
+      hostname: 'api.dropbox.com',
+      path: '/oauth2/token',
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${creds}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(body),
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.access_token) {
+            cachedAccessToken = parsed.access_token;
+            tokenExpiresAt = Date.now() + (parsed.expires_in || 14400) * 1000;
+            console.log('✅ Dropbox access token refreshed');
+            resolve(cachedAccessToken);
+          } else {
+            reject(new Error(parsed.error_description || parsed.error || 'Token refresh failed'));
+          }
+        } catch (e) {
+          reject(new Error(`Token parse error: ${data}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+};
+
+// ── 呼叫 Dropbox API ─────────────────────────────────────────
+const dropboxRequest = async (endpoint, body, isUpload = false, buffer = null) => {
+  const token = await getAccessToken();
+
+  return new Promise((resolve, reject) => {
     const bodyStr = isUpload ? null : JSON.stringify(body);
+
     const options = {
       hostname: isUpload ? 'content.dropboxapi.com' : 'api.dropboxapi.com',
       path: `/2/${endpoint}`,
@@ -30,6 +91,7 @@ const dropboxRequest = (endpoint, body, isUpload = false, buffer = null) => {
 
     if (isUpload && body) {
       options.headers['Dropbox-API-Arg'] = JSON.stringify(body);
+      if (buffer) options.headers['Content-Length'] = buffer.length;
     }
 
     const req = https.request(options, (res) => {
@@ -39,7 +101,7 @@ const dropboxRequest = (endpoint, body, isUpload = false, buffer = null) => {
         try {
           const parsed = JSON.parse(data);
           if (res.statusCode >= 400) {
-            reject(new Error(parsed.error_summary || parsed.error || `HTTP ${res.statusCode}`));
+            reject(new Error(parsed.error_summary || parsed.error || `HTTP ${res.statusCode}: ${data}`));
           } else {
             resolve(parsed);
           }
@@ -63,31 +125,39 @@ const dropboxRequest = (endpoint, body, isUpload = false, buffer = null) => {
 // ── 建立資料夾（若已存在不報錯） ─────────────────────────────
 const createFolder = async (folderPath) => {
   try {
-    const result = await dropboxRequest('files/create_folder_v2', { path: folderPath, autorename: false });
+    const result = await dropboxRequest('files/create_folder_v2', {
+      path: folderPath,
+      autorename: false
+    });
     return result.metadata;
   } catch (err) {
-    // 已存在的錯誤忽略
-    if (err.message && err.message.includes('path/conflict/folder')) return { path_lower: folderPath.toLowerCase() };
+    if (err.message && err.message.includes('path/conflict/folder')) {
+      return { path_lower: folderPath.toLowerCase() };
+    }
     throw err;
   }
 };
 
-// ── 取得檔案的公開分享連結 ───────────────────────────────────
+// ── 取得公開分享連結 ─────────────────────────────────────────
 const getShareLink = async (filePath) => {
   try {
-    // 先嘗試建立新分享連結
     const result = await dropboxRequest('sharing/create_shared_link_with_settings', {
       path: filePath,
       settings: { requested_visibility: 'public', audience: 'public', access: 'viewer' }
     });
-    // 把 ?dl=0 改成 ?raw=1 讓圖片可以直接顯示
-    return result.url.replace('?dl=0', '?raw=1');
+    // ?raw=1 讓圖片可以直接在 <img> 顯示
+    return result.url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '');
   } catch (err) {
-    // 如果連結已存在，改用 list 取得
+    // 連結已存在，改用 list 取得
     if (err.message && err.message.includes('shared_link_already_exists')) {
-      const listResult = await dropboxRequest('sharing/list_shared_links', { path: filePath, direct_only: true });
+      const listResult = await dropboxRequest('sharing/list_shared_links', {
+        path: filePath,
+        direct_only: true
+      });
       if (listResult.links && listResult.links.length > 0) {
-        return listResult.links[0].url.replace('?dl=0', '?raw=1');
+        return listResult.links[0].url
+          .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+          .replace('?dl=0', '');
       }
     }
     throw err;
@@ -97,6 +167,8 @@ const getShareLink = async (filePath) => {
 // ── 建立案件完整資料夾結構 ───────────────────────────────────
 const createCaseFolderStructure = async (caseNumber) => {
   const caseFolder = `${BASE_FOLDER}/${caseNumber}`;
+
+  // 依序建立，避免父資料夾不存在的問題
   await createFolder(BASE_FOLDER);
   await createFolder(caseFolder);
 
@@ -109,12 +181,13 @@ const createCaseFolderStructure = async (caseNumber) => {
     pdf:       `${caseFolder}/結案文件PDF`,
   };
 
+  // 並行建立子資料夾
   await Promise.all(Object.values(subFolders).map(p => createFolder(p)));
   return { caseFolder, subFolders };
 };
 
 // ── 上傳 Buffer 到 Dropbox ───────────────────────────────────
-const uploadBuffer = async (buffer, dropboxPath, mimeType = 'image/jpeg') => {
+const uploadBuffer = async (buffer, dropboxPath) => {
   const result = await dropboxRequest('files/upload', {
     path: dropboxPath,
     mode: 'add',
@@ -122,25 +195,20 @@ const uploadBuffer = async (buffer, dropboxPath, mimeType = 'image/jpeg') => {
     mute: false,
   }, true, buffer);
 
-  // 取得公開分享連結
   const shareUrl = await getShareLink(result.path_lower);
   return { id: result.id, path: result.path_lower, shareUrl, name: result.name };
-};
-
-// ── 上傳本地檔案到 Dropbox ───────────────────────────────────
-const uploadFile = async (localFilePath, dropboxPath) => {
-  if (!fs.existsSync(localFilePath)) throw new Error(`本地檔案不存在：${localFilePath}`);
-  const buffer = fs.readFileSync(localFilePath);
-  return uploadBuffer(buffer, dropboxPath);
 };
 
 // ── 上傳施工照片 ─────────────────────────────────────────────
 const uploadPhoto = async (buffer, fileName, phase, caseNumber) => {
   const { subFolders } = await createCaseFolderStructure(caseNumber);
-  const folderMap = { before: subFolders.before, during: subFolders.during, after: subFolders.after };
+  const folderMap = {
+    before: subFolders.before,
+    during: subFolders.during,
+    after:  subFolders.after
+  };
   const targetFolder = folderMap[phase] || subFolders.after;
-  const dropboxPath = `${targetFolder}/${fileName}`;
-  return uploadBuffer(buffer, dropboxPath);
+  return uploadBuffer(buffer, `${targetFolder}/${fileName}`);
 };
 
 // ── 上傳 Base64 簽名圖片 ─────────────────────────────────────
@@ -149,33 +217,41 @@ const uploadSignature = async (caseNumber, signatureDataUrl) => {
   if (!matches) throw new Error('Invalid base64 data URL');
   const buffer = Buffer.from(matches[2], 'base64');
   const { subFolders } = await createCaseFolderStructure(caseNumber);
-  const fileName = `簽收確認_${caseNumber}_${new Date().toISOString().slice(0,10)}.png`;
-  const dropboxPath = `${subFolders.signature}/${fileName}`;
-  return uploadBuffer(buffer, dropboxPath, 'image/png');
+  const fileName = `簽收確認_${caseNumber}_${new Date().toISOString().slice(0, 10)}.png`;
+  return uploadBuffer(buffer, `${subFolders.signature}/${fileName}`);
 };
 
 // ── 上傳 PDF ─────────────────────────────────────────────────
 const uploadPdf = async (caseNumber, pdfBuffer, pdfFileName) => {
   const { subFolders } = await createCaseFolderStructure(caseNumber);
-  const dropboxPath = `${subFolders.pdf}/${pdfFileName}`;
-  return uploadBuffer(pdfBuffer, dropboxPath, 'application/pdf');
+  return uploadBuffer(pdfBuffer, `${subFolders.pdf}/${pdfFileName}`);
 };
 
 // ── 上傳案件記錄照片 ─────────────────────────────────────────
 const uploadNotePhoto = async (caseNumber, buffer, fileName) => {
   const { subFolders } = await createCaseFolderStructure(caseNumber);
-  const dropboxPath = `${subFolders.notes}/${fileName}`;
-  return uploadBuffer(buffer, dropboxPath);
+  return uploadBuffer(buffer, `${subFolders.notes}/${fileName}`);
 };
 
 // ── 確認 Dropbox 是否已設定 ──────────────────────────────────
-const isDropboxEnabled = () => !!process.env.DROPBOX_ACCESS_TOKEN;
+const isDropboxEnabled = () => {
+  const enabled = !!(
+    process.env.DROPBOX_APP_KEY &&
+    process.env.DROPBOX_APP_SECRET &&
+    process.env.DROPBOX_REFRESH_TOKEN
+  );
+  if (!enabled) {
+    if (!process.env.DROPBOX_APP_KEY) console.warn('Dropbox: DROPBOX_APP_KEY not set');
+    if (!process.env.DROPBOX_APP_SECRET) console.warn('Dropbox: DROPBOX_APP_SECRET not set');
+    if (!process.env.DROPBOX_REFRESH_TOKEN) console.warn('Dropbox: DROPBOX_REFRESH_TOKEN not set');
+  }
+  return enabled;
+};
 
 module.exports = {
   isDropboxEnabled,
   createCaseFolderStructure,
   uploadPhoto,
-  uploadFile,
   uploadBuffer,
   uploadSignature,
   uploadPdf,
