@@ -5,14 +5,6 @@ import { Upload, Camera } from 'lucide-react';
 import { photosAPI } from '../utils/api';
 import toast from 'react-hot-toast';
 
-const BACKEND_URL = 'https://repair-system-production-cf5b.up.railway.app';
-
-const fullUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith('http')) return url;
-  return `${BACKEND_URL}${url}`;
-};
-
 export default function PhotoUpload({ caseId, phase, onSuccess }) {
   const qc = useQueryClient();
 
@@ -36,7 +28,7 @@ export default function PhotoUpload({ caseId, phase, onSuccess }) {
 
   const onDrop = useCallback((acceptedFiles) => {
     if (acceptedFiles.length > 0) uploadMutation.mutate(acceptedFiles);
-  }, []);
+  }, [uploadMutation]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

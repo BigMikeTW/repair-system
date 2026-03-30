@@ -1,8 +1,10 @@
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
+const BACKEND_URL = 'https://repair-system-production-cf5b.up.railway.app';
+
 const api = axios.create({
-  baseURL: 'https://repair-system-production-cf5b.up.railway.app/api',
+  baseURL: `${BACKEND_URL}/api`,
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' }
 });
@@ -20,17 +22,21 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      if (window.location.pathname !== '/login') window.location.href = '/login';
       return Promise.reject(error);
     }
-    if (error.response?.status !== 404) {
-      toast.error(msg);
-    }
+    if (error.response?.status !== 404) toast.error(msg);
     return Promise.reject(error);
   }
 );
+
+export const BACKEND = BACKEND_URL;
+
+export const fullUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${BACKEND_URL}${url}`;
+};
 
 // Auth
 export const authAPI = {
@@ -64,6 +70,17 @@ export const photosAPI = {
   delete: (id) => api.delete(`/photos/${id}`),
 };
 
+// Case Notes
+export const caseNotesAPI = {
+  list: (caseId) => api.get(`/case-notes/${caseId}`),
+  create: (caseId, formData) => api.post(`/case-notes/${caseId}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  update: (caseId, noteId, data) => api.put(`/case-notes/${caseId}/${noteId}`, data),
+  delete: (caseId, noteId) => api.delete(`/case-notes/${caseId}/${noteId}`),
+  deletePhoto: (caseId, photoId) => api.delete(`/case-notes/${caseId}/photo/${photoId}`),
+};
+
 // Chat
 export const chatAPI = {
   getMessages: (caseId, params) => api.get(`/chat/${caseId}/messages`, { params }),
@@ -78,11 +95,11 @@ export const financeAPI = {
   getQuotation: (id) => api.get(`/finance/quotations/${id}`),
   createQuotation: (data) => api.post('/finance/quotations', data),
   updateQuotationStatus: (id, data) => api.put(`/finance/quotations/${id}/status`, data),
-  quotationPdf: (id) => `/api/finance/quotations/${id}/pdf`,
+  quotationPdf: (id) => `${BACKEND_URL}/api/finance/quotations/${id}/pdf`,
   getInvoices: (params) => api.get('/finance/invoices', { params }),
   createInvoice: (data) => api.post('/finance/invoices', data),
   recordPayment: (id, data) => api.put(`/finance/invoices/${id}/payment`, data),
-  invoicePdf: (id) => `/api/finance/invoices/${id}/pdf`,
+  invoicePdf: (id) => `${BACKEND_URL}/api/finance/invoices/${id}/pdf`,
   getStats: () => api.get('/finance/stats'),
   getPayments: () => api.get('/finance/payments'),
 };
@@ -100,12 +117,33 @@ export const usersAPI = {
   readAllNotifications: () => api.put('/users/notifications/read-all'),
 };
 
+// HR
+export const hrAPI = {
+  get: (id) => api.get(`/hr/${id}`),
+  updateProfile: (id, data) => api.put(`/hr/${id}/profile`, data),
+  uploadIdCard: (id, fd) => api.post(`/hr/${id}/id-card`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  addLicense: (id, fd) => api.post(`/hr/${id}/licenses`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  updateLicense: (uid, lid, fd) => api.put(`/hr/${uid}/licenses/${lid}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deleteLicense: (uid, lid) => api.delete(`/hr/${uid}/licenses/${lid}`),
+  addInsurance: (id, fd) => api.post(`/hr/${id}/insurance`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  updateInsurance: (uid, iid, fd) => api.put(`/hr/${uid}/insurance/${iid}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  deleteInsurance: (uid, iid) => api.delete(`/hr/${uid}/insurance/${iid}`),
+};
+
+// Case Types
+export const caseTypesAPI = {
+  list: () => api.get('/case-types'),
+  create: (data) => api.post('/case-types', data),
+  update: (id, data) => api.put(`/case-types/${id}`, data),
+  delete: (id) => api.delete(`/case-types/${id}`),
+};
+
 // Backup
 export const backupAPI = {
   list: () => api.get('/backup/list'),
   create: () => api.post('/backup/create'),
-  exportCases: (params) => `/api/backup/export/cases?${new URLSearchParams(params)}`,
-  exportFinance: () => '/api/backup/export/finance',
+  exportCases: (params) => `${BACKEND_URL}/api/backup/export/cases?${new URLSearchParams(params)}`,
+  exportFinance: () => `${BACKEND_URL}/api/backup/export/finance`,
 };
 
 export default api;

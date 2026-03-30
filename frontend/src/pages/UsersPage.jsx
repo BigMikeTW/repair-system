@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
-import { UserPlus, Edit2, UserX, FileText, ChevronDown } from 'lucide-react';
+import { UserPlus, Edit2, UserX, FileText } from 'lucide-react';
 import { usersAPI } from '../utils/api';
 import { ROLE_LABELS, ROLE_BADGES, formatDateTime } from '../utils/helpers';
 import toast from 'react-hot-toast';
@@ -23,7 +23,7 @@ function UserModal({ user: editUser, onClose, onSuccess }) {
         toast.success('人員資料已更新');
       } else {
         await usersAPI.create(data);
-        toast.success('人員已新增');
+        toast.success('人員已新增，可使用指定 Email 登入');
       }
       onSuccess();
     } catch {}
@@ -80,10 +80,12 @@ function UserModal({ user: editUser, onClose, onSuccess }) {
             </div>
           )}
           {isEdit && (
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" {...register('is_active')} className="rounded" />
-              帳號啟用中
-            </label>
+            <div>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" {...register('is_active')} className="rounded" />
+                帳號啟用中
+              </label>
+            </div>
           )}
           <div className="flex justify-end gap-3 pt-2">
             <button type="button" className="btn" onClick={onClose}>取消</button>
@@ -97,54 +99,12 @@ function UserModal({ user: editUser, onClose, onSuccess }) {
   );
 }
 
-// 每一列人員卡片（手機/小視窗用）
-function UserCard({ u, onEdit, onDeactivate }) {
-  return (
-    <div className="card card-body mb-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary-light flex items-center justify-center text-sm font-semibold text-primary-dark flex-shrink-0">
-            {u.name.slice(0, 2)}
-          </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-sm text-gray-900">{u.name}</span>
-              <span className={`badge ${ROLE_BADGES[u.role]}`}>{ROLE_LABELS[u.role]}</span>
-              <span className={`badge ${u.is_active ? 'badge-success' : 'badge-gray'}`}>{u.is_active ? '啟用' : '停用'}</span>
-            </div>
-            <div className="text-xs text-gray-400 mt-0.5 truncate">{u.email}</div>
-            {u.phone && <div className="text-xs text-gray-400">{u.phone}</div>}
-            {u.specialties?.length > 0 && (
-              <div className="text-xs text-gray-400 mt-0.5">{u.specialties.join(' · ')}</div>
-            )}
-          </div>
-        </div>
-        <div className="flex gap-1.5 flex-shrink-0">
-          <Link to={`/users/${u.id}`} className="btn btn-sm px-2.5 gap-1 text-xs">
-            <FileText size={12} /> 詳情
-          </Link>
-          <button className="btn btn-sm px-2.5" onClick={() => onEdit(u)}>
-            <Edit2 size={12} />
-          </button>
-          {u.is_active && (
-            <button className="btn btn-sm px-2.5 hover:bg-danger-light hover:text-danger"
-              onClick={() => onDeactivate(u)}>
-              <UserX size={12} />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function UsersPage() {
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'card'
 
   const { data: users } = useQuery(['users', search, roleFilter], () =>
     usersAPI.list({ search, role: roleFilter }).then(r => r.data)
@@ -154,10 +114,6 @@ export default function UsersPage() {
     (id) => usersAPI.deactivate(id),
     { onSuccess: () => { toast.success('帳號已停用'); qc.invalidateQueries('users'); } }
   );
-
-  const handleDeactivate = (u) => {
-    if (window.confirm(`確定要停用 ${u.name} 的帳號？`)) deactivate.mutate(u.id);
-  };
 
   return (
     <div className="page-container">
@@ -169,117 +125,62 @@ export default function UsersPage() {
       </div>
 
       <div className="filter-bar">
-        <input
-          className="form-control"
-          style={{ minWidth: '180px', flex: '1', maxWidth: '260px' }}
-          placeholder="搜尋姓名或 Email..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-        />
+        <input className="form-control w-48" placeholder="搜尋姓名或 Email..."
+          value={search} onChange={e => setSearch(e.target.value)} />
         <select className="form-select w-auto" value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
           <option value="">全部角色</option>
           {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        {/* View toggle */}
-        <div className="flex gap-1 ml-auto">
-          <button
-            className={`btn btn-sm px-3 ${viewMode === 'table' ? 'btn-primary' : ''}`}
-            onClick={() => setViewMode('table')}
-          >
-            表格
-          </button>
-          <button
-            className={`btn btn-sm px-3 ${viewMode === 'card' ? 'btn-primary' : ''}`}
-            onClick={() => setViewMode('card')}
-          >
-            卡片
-          </button>
-        </div>
       </div>
 
-      {/* Card view (mobile-friendly) */}
-      {viewMode === 'card' && (
-        <div>
-          {users?.map(u => (
-            <UserCard
-              key={u.id}
-              u={u}
-              onEdit={(u) => { setEditUser(u); setShowModal(true); }}
-              onDeactivate={handleDeactivate}
-            />
-          ))}
-          {!users?.length && (
-            <div className="card card-body text-center py-12 text-sm text-gray-400">沒有符合的人員</div>
-          )}
-        </div>
-      )}
-
-      {/* Table view */}
-      {viewMode === 'table' && (
-        <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="table-base" style={{ minWidth: '800px' }}>
-              <thead>
-                <tr>
-                  <th style={{ minWidth: '120px' }}>姓名</th>
-                  <th style={{ minWidth: '90px' }}>角色</th>
-                  <th style={{ minWidth: '200px' }}>電子郵件</th>
-                  <th style={{ minWidth: '110px' }}>手機</th>
-                  <th style={{ minWidth: '160px' }}>專長</th>
-                  <th style={{ minWidth: '60px' }}>狀態</th>
-                  <th style={{ minWidth: '130px' }}>最後登入</th>
-                  <th style={{ minWidth: '130px' }}>操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users?.map(u => (
-                  <tr key={u.id}>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-primary-light flex items-center justify-center text-xs font-medium text-primary-dark flex-shrink-0">
-                          {u.name.slice(0, 2)}
-                        </div>
-                        <span className="text-sm font-medium whitespace-nowrap">{u.name}</span>
-                      </div>
-                    </td>
-                    <td><span className={`badge ${ROLE_BADGES[u.role]}`}>{ROLE_LABELS[u.role]}</span></td>
-                    <td className="text-xs text-gray-500">{u.email}</td>
-                    <td className="text-xs text-gray-500 whitespace-nowrap">{u.phone || '--'}</td>
-                    <td className="text-xs text-gray-400">
-                      <div className="max-w-[160px] truncate">{u.specialties?.join(', ') || '--'}</div>
-                    </td>
-                    <td>
-                      <span className={`badge ${u.is_active ? 'badge-success' : 'badge-gray'}`}>
-                        {u.is_active ? '啟用' : '停用'}
-                      </span>
-                    </td>
-                    <td className="text-xs text-gray-400 whitespace-nowrap">{formatDateTime(u.last_login)}</td>
-                    <td>
-                      <div className="flex gap-1 flex-nowrap">
-                        <Link to={`/users/${u.id}`} className="btn btn-sm px-2 gap-1 text-xs whitespace-nowrap">
-                          <FileText size={11} /> 詳情
-                        </Link>
-                        <button className="btn btn-sm px-2" onClick={() => { setEditUser(u); setShowModal(true); }}>
-                          <Edit2 size={12} />
-                        </button>
-                        {u.is_active && (
-                          <button className="btn btn-sm px-2 hover:bg-danger-light hover:text-danger"
-                            onClick={() => handleDeactivate(u)}>
-                            <UserX size={12} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!users?.length && (
-                  <tr><td colSpan="8" className="py-12 text-center text-sm text-gray-400">沒有符合的人員</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <div className="card overflow-hidden">
+        <table className="table-base">
+          <thead>
+            <tr><th>姓名</th><th>角色</th><th>電子郵件</th><th>手機</th><th>專長</th><th>狀態</th><th>最後登入</th><th>操作</th></tr>
+          </thead>
+          <tbody>
+            {users?.map(u => (
+              <tr key={u.id}>
+                <td>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-primary-light flex items-center justify-center text-xs font-medium text-primary-dark flex-shrink-0">
+                      {u.name.slice(0, 2)}
+                    </div>
+                    <span className="text-sm font-medium">{u.name}</span>
+                  </div>
+                </td>
+                <td><span className={`badge ${ROLE_BADGES[u.role]}`}>{ROLE_LABELS[u.role]}</span></td>
+                <td className="text-xs text-gray-500">{u.email}</td>
+                <td className="text-xs text-gray-500">{u.phone || '--'}</td>
+                <td className="text-xs text-gray-400 max-w-[140px]">
+                  <div className="truncate">{u.specialties?.join(', ') || '--'}</div>
+                </td>
+                <td><span className={`badge ${u.is_active ? 'badge-success' : 'badge-gray'}`}>{u.is_active ? '啟用' : '停用'}</span></td>
+                <td className="text-xs text-gray-400">{formatDateTime(u.last_login)}</td>
+                <td>
+                  <div className="flex gap-1">
+                    <Link to={`/users/${u.id}`} className="btn btn-sm gap-1 text-xs">
+                      <FileText size={12} /> 詳情
+                    </Link>
+                    <button className="btn btn-sm" onClick={() => { setEditUser(u); setShowModal(true); }}>
+                      <Edit2 size={12} />
+                    </button>
+                    {u.is_active && (
+                      <button className="btn btn-sm text-danger hover:bg-danger-light"
+                        onClick={() => { if (window.confirm(`確定要停用 ${u.name} 的帳號？`)) deactivate.mutate(u.id); }}>
+                        <UserX size={12} />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!users?.length && (
+              <tr><td colSpan="8" className="py-12 text-center text-sm text-gray-400">沒有符合的人員</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {showModal && (
         <UserModal

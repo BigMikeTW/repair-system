@@ -7,11 +7,8 @@ const { query } = require('../../config/database');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
-// Google Drive 整合（選用）
 let syncCasePhotosToDrive = null;
-try {
-  syncCasePhotosToDrive = require('../utils/googleDrive').syncCasePhotosToDrive;
-} catch (e) {}
+try { syncCasePhotosToDrive = require('../utils/googleDrive').syncCasePhotosToDrive; } catch (e) {}
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://repair-system-production-cf5b.up.railway.app';
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
@@ -23,22 +20,18 @@ const storage = multer.diskStorage({
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
-  }
+  filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`)
 });
 
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg','image/png','image/webp','image/heic'];
-    allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('只支援 JPEG, PNG, WebP, HEIC 格式'));
+    allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('只支援 JPEG, PNG, WebP, HEIC'));
   },
   limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024 }
 });
 
-// 產生完整 URL（供前端顯示用）
 const makeFullUrl = (relPath) => {
   if (!relPath) return null;
   if (relPath.startsWith('http')) return relPath;
@@ -48,20 +41,16 @@ const makeFullUrl = (relPath) => {
 // POST /api/photos/:caseId/upload
 router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHandler(async (req, res) => {
   const { phase } = req.body;
-  if (!['before','during','after'].includes(phase)) {
-    return res.status(400).json({ error: '無效施工階段 (before/during/after)' });
-  }
+  if (!['before','during','after'].includes(phase))
+    return res.status(400).json({ error: '無效施工階段' });
 
-  // 取得案件編號
   const caseResult = await query('SELECT case_number FROM cases WHERE id=$1', [req.params.caseId]);
   const caseNumber = caseResult.rows[0]?.case_number || req.params.caseId;
 
   const uploaded = [];
   for (const file of req.files) {
-    // 儲存完整 URL，確保任何角色都能直接使用
     const relPath = `/uploads/${req.params.caseId}/${file.filename}`;
     const fullUrl = makeFullUrl(relPath);
-
     const result = await query(`
       INSERT INTO case_photos (case_id, uploader_id, phase, file_url, file_name, file_size)
       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *
@@ -69,24 +58,19 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
     uploaded.push(result.rows[0]);
   }
 
-  // 記錄操作
-  await query(`
-    INSERT INTO case_activities (case_id, actor_id, actor_name, action, description)
-    VALUES ($1,$2,$3,'photo_uploaded',$4)
-  `, [req.params.caseId, req.user.id, req.user.name,
-      `上傳 ${uploaded.length} 張${phase === 'before' ? '施工前' : phase === 'during' ? '施工中' : '施工後'}照片`]);
+  await query(
+    `INSERT INTO case_activities (case_id, actor_id, actor_name, action, description) VALUES ($1,$2,$3,'photo_uploaded',$4)`,
+    [req.params.caseId, req.user.id, req.user.name,
+     `上傳 ${uploaded.length} 張${phase === 'before' ? '施工前' : phase === 'during' ? '施工中' : '施工後'}照片`]
+  );
 
   // 非同步上傳到 Google Drive
-  if (syncCasePhotosToDrive &&
-      process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID &&
-      process.env.GOOGLE_SERVICE_ACCOUNT_JSON &&
-      uploaded.length > 0) {
+  if (syncCasePhotosToDrive && process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID && process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     setImmediate(async () => {
       try {
-        // 傳入本地相對路徑給 Drive 上傳（Drive 需要讀本地檔案）
         const photosForDrive = uploaded.map(p => ({
           ...p,
-          file_url: `/uploads/${req.params.caseId}/${path.basename(p.file_url)}`
+          file_url: `/uploads/${req.params.caseId}/${path.basename(p.file_url.includes('http') ? new URL(p.file_url).pathname : p.file_url)}`
         }));
         const results = await syncCasePhotosToDrive(caseNumber, photosForDrive);
         for (const r of results) {
@@ -113,11 +97,7 @@ router.get('/:caseId', authenticate, asyncHandler(async (req, res) => {
     `SELECT * FROM case_photos WHERE case_id=$1 ORDER BY phase, created_at`,
     [req.params.caseId]
   );
-  // 確保所有 file_url 都是完整 URL
-  const photos = result.rows.map(p => ({
-    ...p,
-    file_url: makeFullUrl(p.file_url)
-  }));
+  const photos = result.rows.map(p => ({ ...p, file_url: makeFullUrl(p.file_url) }));
   res.json(photos);
 }));
 
@@ -125,19 +105,13 @@ router.get('/:caseId', authenticate, asyncHandler(async (req, res) => {
 router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
   const result = await query('SELECT * FROM case_photos WHERE id=$1', [req.params.id]);
   if (!result.rows.length) return res.status(404).json({ error: '照片不存在' });
-
   const photo = result.rows[0];
-  // 嘗試刪除本地檔案（URL 可能是完整或相對路徑）
   let localPath = photo.file_url;
   if (localPath.startsWith('http')) {
-    // 從完整 URL 中取出相對路徑
-    localPath = localPath.replace(BACKEND_URL, '');
+    try { localPath = new URL(localPath).pathname; } catch {}
   }
   const filePath = path.join(process.cwd(), localPath);
-  if (fs.existsSync(filePath)) {
-    try { fs.unlinkSync(filePath); } catch {}
-  }
-
+  if (fs.existsSync(filePath)) { try { fs.unlinkSync(filePath); } catch {} }
   await query('DELETE FROM case_photos WHERE id=$1', [req.params.id]);
   res.json({ message: '照片已刪除' });
 }));

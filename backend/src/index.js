@@ -33,7 +33,7 @@ app.use('/api/auth/login', authLimiter);
 
 app.use('/uploads', express.static(path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads')));
 
-// Routes
+// ── Routes ───────────────────────────────────────────────────
 app.use('/api/auth',       require('./routes/auth'));
 app.use('/api/cases',      require('./routes/cases'));
 app.use('/api/photos',     require('./routes/photos'));
@@ -50,14 +50,13 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Dat
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../../frontend/dist')));
   app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
-    }
+    if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
   });
 }
 
 app.use(require('./middleware/errorHandler').errorHandler);
 
+// ── Socket.io ────────────────────────────────────────────────
 const connectedUsers = new Map();
 
 io.use(async (socket, next) => {
@@ -68,17 +67,14 @@ io.use(async (socket, next) => {
     socket.userId = decoded.userId;
     socket.userRole = decoded.role;
     next();
-  } catch (err) {
-    next(new Error('Authentication error'));
-  }
+  } catch { next(new Error('Authentication error')); }
 });
 
 io.on('connection', (socket) => {
   connectedUsers.set(socket.userId, socket.id);
   socket.on('join_case', (caseId) => socket.join(`case:${caseId}`));
   socket.on('leave_case', (caseId) => socket.leave(`case:${caseId}`));
-  socket.on('send_message', async (data) => {
-    const { caseId, message, senderName, senderRole } = data;
+  socket.on('send_message', async ({ caseId, message, senderName, senderRole }) => {
     try {
       const { query } = require('./config/database');
       const result = await query(
@@ -86,21 +82,20 @@ io.on('connection', (socket) => {
         [caseId, socket.userId, senderName, senderRole, message]
       );
       io.to(`case:${caseId}`).emit('new_message', result.rows[0]);
-    } catch (err) {
-      socket.emit('error', { message: '訊息發送失敗' });
-    }
+    } catch { socket.emit('error', { message: '訊息發送失敗' }); }
   });
   socket.on('case_updated', (data) => io.to(`case:${data.caseId}`).emit('case_status_changed', data));
   socket.on('notify_user', (data) => {
-    const targetSocketId = connectedUsers.get(data.userId);
-    if (targetSocketId) io.to(targetSocketId).emit('notification', data);
+    const target = connectedUsers.get(data.userId);
+    if (target) io.to(target).emit('notification', data);
   });
-  socket.on('disconnect', () => { connectedUsers.delete(socket.userId); });
+  socket.on('disconnect', () => connectedUsers.delete(socket.userId));
 });
 
 app.set('io', io);
 app.set('connectedUsers', connectedUsers);
 
+// ── Auto backup ───────────────────────────────────────────────
 const scheduleAutoBackup = () => {
   const now = new Date();
   const next2am = new Date();
@@ -118,8 +113,10 @@ const scheduleAutoBackup = () => {
       const cmd = `PGPASSWORD="${process.env.DB_PASSWORD}" pg_dump -h ${process.env.DB_HOST} -U ${process.env.DB_USER} -d ${process.env.DB_NAME} -F p -f "${filepath}"`;
       exec(cmd, async (err) => {
         const fileSize = fs.existsSync(filepath) ? fs.statSync(filepath).size : 0;
-        await query(`INSERT INTO backup_logs (backup_type, file_name, file_size, status, error_message) VALUES ('auto',$1,$2,$3,$4)`,
-          [filename, fileSize, err ? 'failed' : 'success', err ? err.message : null]);
+        await query(
+          `INSERT INTO backup_logs (backup_type, file_name, file_size, status, error_message) VALUES ('auto',$1,$2,$3,$4)`,
+          [filename, fileSize, err ? 'failed' : 'success', err ? err.message : null]
+        );
       });
     } catch (e) { console.error('Auto backup error:', e); }
     scheduleAutoBackup();

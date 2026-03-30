@@ -30,12 +30,10 @@ const PrivateRoute = ({ children, roles }) => {
 
 export default function App() {
   const { isAuthenticated } = useAuthStore();
-
   return (
     <Routes>
       <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />} />
-
       <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
         <Route index element={<DashboardPage />} />
         <Route path="cases" element={<CasesPage />} />
@@ -55,7 +53,6 @@ export default function App() {
         <Route path="backup" element={<PrivateRoute roles={['admin']}><BackupPage /></PrivateRoute>} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>
-
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
