@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { MapPin, Clock, User, Phone, Building, ArrowLeft, MessageSquare, Camera, FileText, Activity } from 'lucide-react';
+import { MapPin, Clock, User, Phone, Building, ArrowLeft, MessageSquare, FileText, Activity } from 'lucide-react';
 import { casesAPI, photosAPI } from '../utils/api';
 import { STATUS_LABELS, STATUS_BADGES, URGENCY_LABELS, URGENCY_BADGES, formatDateTime } from '../utils/helpers';
 import useAuthStore from '../store/authStore';
@@ -9,7 +9,15 @@ import toast from 'react-hot-toast';
 import DispatchModal from '../components/DispatchModal';
 import PhotoUpload from '../components/PhotoUpload';
 
-// 時間軸 - 只顯示有意義的施工進度節點（不含客服受理）
+const BACKEND_URL = 'https://repair-system-production-cf5b.up.railway.app';
+
+// 確保圖片 URL 是完整路徑
+const fullUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${BACKEND_URL}${url}`;
+};
+
 const TimelineItem = ({ label, time, done, active }) => (
   <div className="relative pb-5">
     <div className={`timeline-dot-${done ? 'done' : active ? 'active' : 'pending'}`} />
@@ -45,14 +53,14 @@ export default function CaseDetailPage() {
   const c = caseData;
   const s = c.status;
 
-  // 時間軸：移除「客服受理」，改放在操作記錄頁籤
+  // 時間軸：不含客服受理
   const statusFlow = [
-    { key: 'pending',     label: '報修申請',   time: c.created_at },
-    { key: 'dispatched',  label: '派工完成',   time: c.assigned_at },
-    { key: 'in_progress', label: '工程師到場', time: c.checkin_time },
+    { key: 'pending',              label: '報修申請',   time: c.created_at },
+    { key: 'dispatched',           label: '派工完成',   time: c.assigned_at },
+    { key: 'in_progress',          label: '工程師到場', time: c.checkin_time },
     { key: 'in_progress_checkout', label: '工程師離場', time: c.checkout_time },
-    { key: 'signing',     label: '施工完成',   time: c.actual_end || c.checkout_time },
-    { key: 'completed',   label: '業主簽收',   time: c.signed_at },
+    { key: 'signing',              label: '施工完成',   time: c.actual_end || c.checkout_time },
+    { key: 'completed',            label: '業主簽收',   time: c.signed_at },
   ];
 
   const statusOrder = ['pending','accepted','dispatched','in_progress','signing','completed','closed'];
@@ -66,7 +74,6 @@ export default function CaseDetailPage() {
     if (key === 'completed') return !!c.signed_at;
     return currentIdx > statusOrder.indexOf(key);
   };
-
   const isActive = (key) => {
     if (key === 'in_progress') return s === 'in_progress' && !c.checkout_time;
     if (key === 'in_progress_checkout') return s === 'in_progress' && !!c.checkin_time && !c.checkout_time;
@@ -74,25 +81,25 @@ export default function CaseDetailPage() {
     return s === key;
   };
 
+  // 照片分組，統一處理 URL
   const photosByPhase = { before: [], during: [], after: [] };
-  c.photos?.forEach(p => { if (photosByPhase[p.phase]) photosByPhase[p.phase].push(p); });
+  c.photos?.forEach(p => {
+    const photo = { ...p, file_url: fullUrl(p.file_url) };
+    if (photosByPhase[p.phase]) photosByPhase[p.phase].push(photo);
+  });
 
-  // 分類操作記錄：客服受理相關的獨立一個頁籤
-  const csActivities = c.activities?.filter(a =>
-    ['accepted','status_changed','assigned','created'].includes(a.action)
-  ) || [];
+  // 移除重複（URL 相同）的佔位空白格
   const allActivities = c.activities || [];
 
   const tabs = [
-    { key: 'info', label: '案件資訊' },
-    { key: 'timeline', label: '進度追蹤' },
-    { key: 'photos', label: `照片記錄 (${c.photos?.length || 0})` },
+    { key: 'info',       label: '案件資訊' },
+    { key: 'timeline',   label: '進度追蹤' },
+    { key: 'photos',     label: `照片記錄 (${c.photos?.length || 0})` },
     { key: 'activities', label: `客服記錄 (${allActivities.length})` },
   ];
 
   return (
     <div className="page-container">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <button onClick={() => navigate('/cases')} className="btn btn-sm">
           <ArrowLeft size={13} /> 返回
@@ -157,14 +164,14 @@ export default function CaseDetailPage() {
                   {c.checkout_time && <div className="flex justify-between"><span className="text-gray-400">離場時間</span><span className="text-success">{formatDateTime(c.checkout_time)}</span></div>}
                   {c.checkin_lat && (
                     <div className="text-xs text-gray-400 flex items-center gap-1">
-                      <MapPin size={11} /> GPS 打卡：{parseFloat(c.checkin_lat).toFixed(6)}, {parseFloat(c.checkin_lng).toFixed(6)}
+                      <MapPin size={11} /> GPS：{parseFloat(c.checkin_lat).toFixed(6)}, {parseFloat(c.checkin_lng).toFixed(6)}
                     </div>
                   )}
                 </div>
               ) : <div className="text-sm text-gray-400">尚未派工</div>}
             </div>
 
-            {/* 業主簽收記錄 - 顯示簽名影像 */}
+            {/* 業主簽收 */}
             {c.signed_at && (
               <div className="card card-body bg-success-light border-success/20 space-y-3">
                 <h3 className="font-medium text-sm text-success">業主簽收記錄</h3>
@@ -172,22 +179,19 @@ export default function CaseDetailPage() {
                   <div className="flex justify-between"><span className="text-gray-500">簽收人</span><span className="font-medium">{c.signed_by || '--'}</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">簽收時間</span><span>{formatDateTime(c.signed_at)}</span></div>
                 </div>
-                {/* 顯示簽名影像 */}
                 {c.owner_signature && (
                   <div>
                     <div className="text-xs text-gray-500 mb-1.5">簽名影像</div>
                     <div className="border border-success/30 rounded-lg overflow-hidden bg-white p-2">
-                      <img
-                        src={c.owner_signature}
-                        alt="業主簽名"
-                        className="max-w-full h-auto max-h-24 mx-auto block"
-                        style={{ mixBlendMode: 'multiply' }}
-                      />
+                      <img src={c.owner_signature} alt="業主簽名" className="max-w-full h-auto max-h-24 mx-auto block" style={{ mixBlendMode: 'multiply' }} />
                     </div>
                   </div>
                 )}
-                {c.completion_notes && (
-                  <div className="text-xs text-gray-500">備注：{c.completion_notes}</div>
+                {c.completion_notes && <div className="text-xs text-gray-500">備注：{c.completion_notes}</div>}
+                {c.drive_pdf_link && (
+                  <a href={c.drive_pdf_link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+                    <FileText size={11} /> 查看結案 PDF（Google Drive）
+                  </a>
                 )}
               </div>
             )}
@@ -195,7 +199,7 @@ export default function CaseDetailPage() {
         </div>
       )}
 
-      {/* ── 進度追蹤 - 不含客服受理 ── */}
+      {/* ── 進度追蹤 ── */}
       {activeTab === 'timeline' && (
         <div className="max-w-lg">
           <div className="card card-body">
@@ -204,23 +208,18 @@ export default function CaseDetailPage() {
             </h3>
             <div className="timeline-line">
               {statusFlow.map((step) => (
-                <TimelineItem
-                  key={step.key}
-                  label={step.label}
-                  time={step.time}
-                  done={isDone(step.key)}
-                  active={isActive(step.key)}
-                />
+                <TimelineItem key={step.key} label={step.label} time={step.time}
+                  done={isDone(step.key)} active={isActive(step.key)} />
               ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── 照片記錄 - 修正圖片顯示 ── */}
+      {/* ── 照片記錄 ── */}
       {activeTab === 'photos' && (
         <div className="space-y-5">
-          {['before', 'during', 'after'].map(phase => (
+          {['before','during','after'].map(phase => (
             <div key={phase} className="card card-body">
               <h3 className="font-medium text-sm mb-4">
                 {phase === 'before' ? '施工前' : phase === 'during' ? '施工中' : '施工後'}
@@ -229,27 +228,21 @@ export default function CaseDetailPage() {
               {photosByPhase[phase].length > 0 ? (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mb-4">
                   {photosByPhase[phase].map(p => (
-                    <a
-                      key={p.id}
-                      href={`https://repair-system-production-cf5b.up.railway.app${p.file_url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="aspect-square rounded-lg overflow-hidden border border-gray-100 block bg-gray-50 hover:opacity-90 transition-opacity"
-                    >
+                    <a key={p.id} href={p.file_url} target="_blank" rel="noopener noreferrer"
+                      className="aspect-square rounded-lg overflow-hidden border border-gray-100 block bg-gray-50 hover:opacity-90 transition-opacity">
                       <img
-                        src={`https://repair-system-production-cf5b.up.railway.app${p.file_url}`}
-                        alt={`${phase} photo`}
+                        src={p.file_url}
+                        alt=""
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = '<div class="w-full h-full flex items-center justify-center text-xs text-gray-400">無法載入</div>';
+                          e.target.parentElement.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#aaa;background:#f9fafb;">無法載入</div>';
                         }}
                       />
                     </a>
                   ))}
                 </div>
               ) : (
-                <div className="text-xs text-gray-300 mb-3">尚無照片</div>
+                <p className="text-xs text-gray-300 mb-3">尚無照片</p>
               )}
               {(canManage() || isEngineer()) && (
                 <PhotoUpload caseId={id} phase={phase} onSuccess={() => qc.invalidateQueries(['case', id])} />
@@ -259,7 +252,7 @@ export default function CaseDetailPage() {
         </div>
       )}
 
-      {/* ── 客服受理記錄 - 獨立頁籤 ── */}
+      {/* ── 客服記錄 ── */}
       {activeTab === 'activities' && (
         <div className="card card-body max-w-2xl">
           <h3 className="font-medium text-sm mb-4 flex items-center gap-2">
@@ -278,13 +271,6 @@ export default function CaseDetailPage() {
                       <span className="text-[10px] text-gray-400">{formatDateTime(a.created_at)}</span>
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5">{a.description}</div>
-                    {a.metadata && (() => {
-                      try {
-                        const meta = typeof a.metadata === 'string' ? JSON.parse(a.metadata) : a.metadata;
-                        if (meta?.notes) return <div className="text-[10px] text-gray-400 mt-0.5">備注：{meta.notes}</div>;
-                      } catch {}
-                      return null;
-                    })()}
                   </div>
                 </div>
               ))}
@@ -294,11 +280,8 @@ export default function CaseDetailPage() {
       )}
 
       {showDispatch && (
-        <DispatchModal
-          caseId={id}
-          onClose={() => setShowDispatch(false)}
-          onSuccess={() => { setShowDispatch(false); qc.invalidateQueries(['case', id]); }}
-        />
+        <DispatchModal caseId={id} onClose={() => setShowDispatch(false)}
+          onSuccess={() => { setShowDispatch(false); qc.invalidateQueries(['case', id]); }} />
       )}
     </div>
   );
