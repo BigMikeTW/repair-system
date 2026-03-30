@@ -32,6 +32,7 @@ const navConfig = [
     section: '財務管理',
     items: [
       { to: '/finance', icon: FileText, label: '報價/結案單', roles: ['admin','customer_service'] },
+      { to: '/field-quote', icon: FileText, label: '現場報價單', roles: ['engineer'] },
       { to: '/payments', icon: CreditCard, label: '請款記錄', roles: ['admin','customer_service'] },
     ]
   },
@@ -75,15 +76,15 @@ export default function Layout() {
     return () => socket.off('notification');
   }, [socket]);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   const visibleNav = navConfig.map(section => ({
     ...section,
     items: section.items.filter(item => item.roles.includes(user?.role))
   })).filter(s => s.items.length > 0);
+
+  const isEngineer = user?.role === 'engineer';
+  const canManage = ['admin','customer_service'].includes(user?.role);
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
@@ -182,9 +183,18 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2">
-            <NavLink to="/cases/new" className="btn btn-primary btn-sm hidden sm:flex">
-              + 新增報修
-            </NavLink>
+            {/* 只有管理員和客服才顯示新增報修按鈕 */}
+            {canManage && (
+              <NavLink to="/cases/new" className="btn btn-primary btn-sm hidden sm:flex">
+                + 新增報修
+              </NavLink>
+            )}
+            {/* 工程師顯示新增現場報價單 */}
+            {isEngineer && (
+              <NavLink to="/field-quote" className="btn btn-primary btn-sm hidden sm:flex">
+                + 現場報價單
+              </NavLink>
+            )}
             <div className="relative">
               <button className="p-1.5 hover:bg-gray-100 rounded relative">
                 <Bell size={17} className="text-gray-500" />

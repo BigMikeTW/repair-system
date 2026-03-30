@@ -10,6 +10,7 @@ import CaseDetailPage from './pages/CaseDetailPage';
 import NewCasePage from './pages/NewCasePage';
 import DispatchPage from './pages/DispatchPage';
 import FieldPage from './pages/FieldPage';
+import FieldQuotePage from './pages/FieldQuotePage';
 import ChatPage from './pages/ChatPage';
 import SignPage from './pages/SignPage';
 import FinancePage from './pages/FinancePage';
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="cases/:id/sign" element={<SignPage />} />
         <Route path="dispatch" element={<PrivateRoute roles={['admin','customer_service']}><DispatchPage /></PrivateRoute>} />
         <Route path="field" element={<PrivateRoute roles={['engineer']}><FieldPage /></PrivateRoute>} />
+        <Route path="field-quote" element={<PrivateRoute roles={['engineer']}><FieldQuotePage /></PrivateRoute>} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="chat/:caseId" element={<ChatPage />} />
         <Route path="finance" element={<PrivateRoute roles={['admin','customer_service']}><FinancePage /></PrivateRoute>} />

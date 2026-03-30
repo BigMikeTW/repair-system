@@ -1,6 +1,5 @@
 const router = require('express').Router();
 const bcrypt = require('bcryptjs');
-const { body, validationResult } = require('express-validator');
 const { query } = require('../../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -36,7 +35,7 @@ router.get('/engineers', authenticate, asyncHandler(async (req, res) => {
   res.json(result.rows);
 }));
 
-// GET /api/users/notifications/mine  ← 必須在 /:id 之前
+// GET /api/users/notifications/mine  ← 必須在 /:id 之前定義
 router.get('/notifications/mine', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT * FROM notifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 50`,
@@ -45,7 +44,7 @@ router.get('/notifications/mine', authenticate, asyncHandler(async (req, res) =>
   res.json(result.rows);
 }));
 
-// PUT /api/users/notifications/read-all  ← 必須在 /:id 之前
+// PUT /api/users/notifications/read-all
 router.put('/notifications/read-all', authenticate, asyncHandler(async (req, res) => {
   await query(`UPDATE notifications SET is_read=true WHERE user_id=$1`, [req.user.id]);
   res.json({ message: '已全部標為已讀' });
@@ -73,15 +72,13 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
 // POST /api/users - 新增人員
 router.post('/', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
   const { name, email, password, phone, role, specialties } = req.body;
-
   if (!name || !email || !password || !role) {
     return res.status(400).json({ error: '姓名、Email、密碼、角色為必填' });
   }
   if (password.length < 8) {
     return res.status(400).json({ error: '密碼至少 8 碼' });
   }
-
-  const exists = await query('SELECT id FROM users WHERE email=$1', [email]);
+  const exists = await query('SELECT id FROM users WHERE email=$1', [email.toLowerCase().trim()]);
   if (exists.rows.length) return res.status(409).json({ error: 'Email 已存在' });
 
   const hashed = await bcrypt.hash(password, 12);
@@ -97,13 +94,14 @@ router.post('/', authenticate, authorize('admin'), asyncHandler(async (req, res)
 router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
   const { name, phone, role, specialties, is_active, password } = req.body;
 
-  // 如果有填新密碼才更新密碼
-  if (password && password.trim() !== '') {
-    if (password.length < 8) {
+  // 有填密碼才更新密碼
+  if (password && password.trim().length > 0) {
+    if (password.trim().length < 8) {
       return res.status(400).json({ error: '密碼至少 8 碼' });
     }
-    const hashed = await bcrypt.hash(password, 12);
+    const hashed = await bcrypt.hash(password.trim(), 12);
     await query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.params.id]);
+    console.log(`Password updated for user: ${req.params.id}`);
   }
 
   const result = await query(`
