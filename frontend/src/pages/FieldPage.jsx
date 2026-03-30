@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { Link } from 'react-router-dom';
 import { MapPin, Camera, CheckCircle, Plus, Edit2, Trash2, FileText, Image, X, BookOpen } from 'lucide-react';
-import { casesAPI } from '../utils/api';
+import { casesAPI, photosAPI } from '../utils/api';
 import api from '../utils/api';
 import { formatDateTime } from '../utils/helpers';
 import useAuthStore from '../store/authStore';
@@ -264,6 +264,26 @@ export default function FieldPage() {
 
   const isClosed = activeCase && ['completed','closed','cancelled'].includes(activeCase.status);
 
+  // 獨立查詢施工照片（casesAPI.list 不含照片）
+  const { data: casePhotos, refetch: refetchPhotos } = useQuery(
+    ['fieldPhotos', activeCase?.id],
+    () => photosAPI.list(activeCase.id).then(r => r.data),
+    { enabled: !!activeCase?.id }
+  );
+
+  const BACKEND_URL = 'https://repair-system-production-cf5b.up.railway.app';
+  const fullUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${BACKEND_URL}${url}`;
+  };
+
+  const photosByPhase = { before: [], during: [], after: [] };
+  casePhotos?.forEach(p => {
+    const photo = { ...p, file_url: fullUrl(p.file_url) };
+    if (photosByPhase[p.phase]) photosByPhase[p.phase].push(photo);
+  });
+
   const checkinMutation = useMutation(
     ({ type, lat, lng, address }) =>
       casesAPI.checkin(activeCase.id, { type, latitude: lat, longitude: lng, address, notes }),
@@ -418,8 +438,36 @@ export default function FieldPage() {
                         <Camera size={14} className="inline mr-1.5 text-gray-400" />
                         {phase === 'before' ? '施工前照片' : phase === 'during' ? '施工中照片' : '施工後照片'}
                         {(phase === 'before' || phase === 'after') && <span className="text-danger ml-1 text-xs">必填</span>}
+                        <span className="ml-2 text-xs text-gray-400 font-normal">({photosByPhase[phase].length} 張)</span>
                       </h3>
-                      <PhotoUpload caseId={activeCase.id} phase={phase} onSuccess={() => qc.invalidateQueries('myTasks')} />
+
+                      {/* 已上傳照片縮圖（電腦版 50% 寬度，手機版 3 欄） */}
+                      {photosByPhase[phase].length > 0 && (
+                        <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-3">
+                          {photosByPhase[phase].map(p => (
+                            <a key={p.id} href={p.file_url} target="_blank" rel="noopener noreferrer"
+                              className="aspect-square rounded-lg overflow-hidden border border-gray-100 block bg-gray-50">
+                              <img
+                                src={p.file_url}
+                                alt=""
+                                className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                                onError={(e) => {
+                                  e.target.parentElement.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;background:#f9fafb;">無法載入</div>';
+                                }}
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      <PhotoUpload
+                        caseId={activeCase.id}
+                        phase={phase}
+                        onSuccess={() => {
+                          qc.invalidateQueries('myTasks');
+                          refetchPhotos();
+                        }}
+                      />
                     </div>
                   ))}
                 </div>

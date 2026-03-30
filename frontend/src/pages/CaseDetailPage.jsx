@@ -81,7 +81,7 @@ const HorizontalTimeline = ({ steps, currentStatus, caseData }) => {
                     : <Circle size={18} />}
                 </div>
                 {/* 標籤 */}
-                <div className={`text-center text-[10px] leading-tight font-medium
+                <div className={`text-center text-xs leading-tight font-medium
                   ${state === 'done' ? 'text-primary' :
                     state === 'active' ? 'text-primary font-semibold' :
                     'text-gray-300'}`}>
@@ -89,12 +89,12 @@ const HorizontalTimeline = ({ steps, currentStatus, caseData }) => {
                 </div>
                 {/* 時間 */}
                 {step.time && (
-                  <div className="text-[9px] text-success text-center leading-tight">
+                  <div className="text-[11px] text-success text-center leading-tight">
                     {formatDateTime(step.time)}
                   </div>
                 )}
                 {!step.time && state === 'active' && (
-                  <div className="text-[9px] text-primary text-center bg-primary/10 rounded px-1 py-0.5">進行中</div>
+                  <div className="text-[11px] text-primary text-center bg-primary/10 rounded px-1 py-0.5">進行中</div>
                 )}
               </div>
             );

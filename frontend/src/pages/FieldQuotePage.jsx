@@ -22,7 +22,7 @@ export default function FieldQuotePage() {
   const [submitted, setSubmitted] = useState(false);
   const [quoteData, setQuoteData] = useState(null);
 
-  const { register, control, handleSubmit, watch, formState: { isSubmitting } } = useForm({
+  const { register, control, handleSubmit, watch, setValue, formState: { isSubmitting } } = useForm({
     defaultValues: {
       case_id: preselectedCaseId,
       tax_rate: TAX_RATE,
@@ -46,6 +46,14 @@ export default function FieldQuotePage() {
   const activeCases = myCases?.cases?.filter(c =>
     ['dispatched','in_progress','signing','pending','accepted'].includes(c.status)
   ) || [];
+
+  // 當案件選單載入完成後，再次確保帶入正確的 case_id
+  useEffect(() => {
+    if (preselectedCaseId && activeCases.length > 0) {
+      const found = activeCases.find(c => c.id === preselectedCaseId);
+      if (found) setValue('case_id', preselectedCaseId);
+    }
+  }, [activeCases.length, preselectedCaseId]);
 
   useEffect(() => {
     if (canvasRef.current) {
