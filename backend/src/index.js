@@ -128,10 +128,10 @@ const runMigrations = async () => {
   try {
     await query(`
       CREATE TABLE IF NOT EXISTS closure_reports (
-        id SERIAL PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         closure_number VARCHAR(20) UNIQUE NOT NULL,
-        case_id INTEGER REFERENCES cases(id) ON DELETE SET NULL,
-        created_by INTEGER REFERENCES users(id),
+        case_id UUID REFERENCES cases(id) ON DELETE SET NULL,
+        created_by UUID REFERENCES users(id),
         summary TEXT,
         notes TEXT,
         status VARCHAR(20) DEFAULT 'issued',
@@ -141,16 +141,16 @@ const runMigrations = async () => {
     `);
     await query(`
       CREATE TABLE IF NOT EXISTS receipts (
-        id SERIAL PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         receipt_number VARCHAR(20) UNIQUE NOT NULL,
-        invoice_id INTEGER REFERENCES invoices(id) ON DELETE SET NULL,
+        invoice_id UUID REFERENCES invoices(id) ON DELETE SET NULL,
         amount NUMERIC(12,2) NOT NULL,
         payment_date TIMESTAMPTZ DEFAULT NOW(),
-        payment_method VARCHAR(50) DEFAULT '銀行轉帳',
+        payment_method VARCHAR(50) DEFAULT 'bank_transfer',
         reference_number VARCHAR(100),
         bank_account VARCHAR(100),
         notes TEXT,
-        recorded_by INTEGER REFERENCES users(id),
+        recorded_by UUID REFERENCES users(id),
         created_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
