@@ -8,10 +8,15 @@ const { authenticate } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
 let driveUtils = null;
-try { driveUtils = require('../utils/googleDrive'); } catch (e) {}
+try {
+  driveUtils = require('../utils/googleDrive');
+  console.log('✅ Google Drive module loaded');
+} catch (e) {
+  console.warn('⚠️ Google Drive module not available:', e.message);
+}
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://repair-system-production-cf5b.up.railway.app';
-const uploadDir = process.env.UPLOAD_DIR || './uploads';
+const uploadDir = path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
@@ -26,16 +31,37 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg','image/png','image/webp','image/heic'];
+    const allowed = ['image/jpeg','image/png','image/webp','image/heic','image/jpg'];
     allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('只支援 JPEG, PNG, WebP, HEIC'));
   },
-  limits: { fileSize: parseInt(process.env.MAX_FILE_SIZE) || 15 * 1024 * 1024 }
+  limits: { fileSize: 20 * 1024 * 1024 } // 20MB
 });
 
-const makeFullUrl = (relPath) => {
-  if (!relPath) return null;
-  if (relPath.startsWith('http')) return relPath;
-  return `${BACKEND_URL}${relPath}`;
+const makeFullUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${BACKEND_URL}${url}`;
+};
+
+// ── 上傳照片到 Drive 並回傳 Drive URL ────────────────────────
+const uploadPhotoToDrive = async (localPath, fileName, phase, caseNumber) => {
+  if (!driveUtils) throw new Error('Drive module not loaded');
+  if (!process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID) throw new Error('GOOGLE_DRIVE_ROOT_FOLDER_ID not set');
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON not set');
+
+  const { createCaseFolderStructure, uploadFileToDrive } = driveUtils;
+  const { subFolders } = await createCaseFolderStructure(caseNumber);
+  const folderMap = { before: subFolders.before, during: subFolders.during, after: subFolders.after };
+  const targetFolder = folderMap[phase] || subFolders.after;
+
+  const ext = path.extname(localPath).toLowerCase();
+  const mimeMap = {
+    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+    '.png': 'image/png', '.webp': 'image/webp', '.heic': 'image/heic'
+  };
+  const mimeType = mimeMap[ext] || 'image/jpeg';
+
+  return uploadFileToDrive(localPath, fileName, targetFolder, mimeType);
 };
 
 // POST /api/photos/:caseId/upload
@@ -45,23 +71,45 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
     return res.status(400).json({ error: '無效施工階段' });
 
   const caseResult = await query('SELECT case_number FROM cases WHERE id=$1', [req.params.caseId]);
-  const caseNumber = caseResult.rows[0]?.case_number || req.params.caseId;
+  if (!caseResult.rows.length) return res.status(404).json({ error: '案件不存在' });
+  const caseNumber = caseResult.rows[0].case_number;
+
+  const driveEnabled = !!(driveUtils &&
+    process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID &&
+    process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
 
   const uploaded = [];
-  const localPaths = []; // 保留本地路徑供 Drive 上傳使用
 
   for (const file of req.files) {
+    const localPath = file.path; // multer 存的完整路徑
     const relPath = `/uploads/${req.params.caseId}/${file.filename}`;
-    const fullUrl = makeFullUrl(relPath);
-    const localPath = path.join(process.cwd(), uploadDir, req.params.caseId, file.filename);
+    let displayUrl = makeFullUrl(relPath);
+    let driveId = null;
+    let driveLink = null;
+
+    // 如果 Drive 已設定，同步上傳並使用 Drive URL 顯示
+    if (driveEnabled) {
+      try {
+        const driveFile = await uploadPhotoToDrive(localPath, file.originalname, phase, caseNumber);
+        driveId = driveFile.id;
+        driveLink = driveFile.webViewLink;
+        // 使用 Drive 直接預覽連結（可在瀏覽器顯示圖片）
+        displayUrl = `https://drive.google.com/uc?export=view&id=${driveFile.id}`;
+        console.log(`✅ Uploaded to Drive: ${file.originalname} → ${driveLink}`);
+      } catch (driveErr) {
+        console.error(`❌ Drive upload failed for ${file.originalname}:`, driveErr.message);
+        // Drive 失敗時退回用 Railway URL
+      }
+    }
 
     const result = await query(`
-      INSERT INTO case_photos (case_id, uploader_id, phase, file_url, file_name, file_size)
-      VALUES ($1,$2,$3,$4,$5,$6) RETURNING *
-    `, [req.params.caseId, req.user.id, phase, fullUrl, file.originalname, file.size]);
+      INSERT INTO case_photos (case_id, uploader_id, phase, file_url, file_name, file_size, drive_id, drive_link, drive_synced_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *
+    `, [req.params.caseId, req.user.id, phase, displayUrl,
+        file.originalname, file.size, driveId, driveLink,
+        driveId ? new Date() : null]);
 
     uploaded.push(result.rows[0]);
-    localPaths.push({ id: result.rows[0].id, localPath, fileName: file.originalname });
   }
 
   await query(
@@ -70,43 +118,7 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
      `上傳 ${uploaded.length} 張${phase === 'before' ? '施工前' : phase === 'during' ? '施工中' : '施工後'}照片`]
   );
 
-  // 先回應前端（不等 Drive）
-  res.json({ photos: uploaded });
-
-  // 非同步上傳到 Google Drive
-  if (driveUtils && process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID && process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
-    setImmediate(async () => {
-      try {
-        const { createCaseFolderStructure, uploadFileToDrive } = driveUtils;
-        const { subFolders } = await createCaseFolderStructure(caseNumber);
-        const folderMap = { before: subFolders.before, during: subFolders.during, after: subFolders.after };
-        const targetFolder = folderMap[phase] || subFolders.after;
-
-        for (const item of localPaths) {
-          try {
-            if (!fs.existsSync(item.localPath)) {
-              console.warn(`File not found for Drive upload: ${item.localPath}`);
-              continue;
-            }
-            const ext = path.extname(item.localPath).toLowerCase();
-            const mimeMap = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.heic': 'image/heic' };
-            const mimeType = mimeMap[ext] || 'image/jpeg';
-            const driveFile = await uploadFileToDrive(item.localPath, item.fileName, targetFolder, mimeType);
-            await query(
-              `UPDATE case_photos SET drive_id=$1, drive_link=$2, drive_synced_at=NOW() WHERE id=$3`,
-              [driveFile.id, driveFile.webViewLink, item.id]
-            );
-            console.log(`✅ Uploaded to Drive: ${item.fileName}`);
-          } catch (fileErr) {
-            console.error(`Drive upload failed for ${item.fileName}:`, fileErr.message);
-          }
-        }
-        console.log(`✅ Drive sync complete for ${caseNumber}`);
-      } catch (err) {
-        console.error('Drive sync error:', err.message);
-      }
-    });
-  }
+  res.json({ photos: uploaded, drive_enabled: driveEnabled });
 }));
 
 // GET /api/photos/:caseId
@@ -115,7 +127,13 @@ router.get('/:caseId', authenticate, asyncHandler(async (req, res) => {
     `SELECT * FROM case_photos WHERE case_id=$1 ORDER BY phase, created_at`,
     [req.params.caseId]
   );
-  const photos = result.rows.map(p => ({ ...p, file_url: makeFullUrl(p.file_url) }));
+  // 優先用 Drive URL（永久有效），否則用 Railway URL
+  const photos = result.rows.map(p => ({
+    ...p,
+    file_url: p.drive_id
+      ? `https://drive.google.com/uc?export=view&id=${p.drive_id}`
+      : makeFullUrl(p.file_url)
+  }));
   res.json(photos);
 }));
 
@@ -124,9 +142,12 @@ router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
   const result = await query('SELECT * FROM case_photos WHERE id=$1', [req.params.id]);
   if (!result.rows.length) return res.status(404).json({ error: '照片不存在' });
   const photo = result.rows[0];
+  // 刪除本地檔案
   let localPath = photo.file_url;
-  if (localPath && localPath.startsWith('http')) {
+  if (localPath && localPath.startsWith('http') && !localPath.includes('drive.google.com')) {
     try { localPath = new URL(localPath).pathname; } catch { localPath = null; }
+  } else if (localPath && localPath.includes('drive.google.com')) {
+    localPath = null; // Drive 檔案不刪本地
   }
   if (localPath) {
     const filePath = path.join(process.cwd(), localPath);
