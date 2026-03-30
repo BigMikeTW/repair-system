@@ -2,19 +2,11 @@ const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const stream = require('stream');
 const { v4: uuidv4 } = require('uuid');
 const { query } = require('../../config/database');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
-
-let driveUtils = null;
-try {
-  driveUtils = require('../utils/googleDrive');
-  console.log('✅ Google Drive module loaded');
-} catch (e) {
-  console.warn('⚠️ Google Drive module not available:', e.message);
-}
+const { isDropboxEnabled, uploadPhoto } = require('../utils/dropbox');
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://repair-system-production-cf5b.up.railway.app';
 
@@ -46,50 +38,6 @@ const makeFullUrl = (url) => {
   return `${BACKEND_URL}${url}`;
 };
 
-const isDriveEnabled = () => {
-  if (!driveUtils) { console.warn('Drive: module not loaded'); return false; }
-  if (!process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID) { console.warn('Drive: GOOGLE_DRIVE_ROOT_FOLDER_ID not set'); return false; }
-  if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON) { console.warn('Drive: GOOGLE_SERVICE_ACCOUNT_JSON not set'); return false; }
-  return true;
-};
-
-// 從 Buffer 上傳到 Google Drive（已包含 makeFilePublic）
-const uploadBufferToDrivePhoto = async (buffer, fileName, phase, caseNumber) => {
-  const { createCaseFolderStructure, getDriveClient } = driveUtils;
-  const { subFolders } = await createCaseFolderStructure(caseNumber);
-  const folderMap = { before: subFolders.before, during: subFolders.during, after: subFolders.after };
-  const targetFolder = folderMap[phase] || subFolders.after;
-
-  const ext = path.extname(fileName).toLowerCase();
-  const mimeMap = {
-    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-    '.png': 'image/png', '.webp': 'image/webp', '.heic': 'image/heic'
-  };
-  const mimeType = mimeMap[ext] || 'image/jpeg';
-
-  const drive = getDriveClient();
-  const bufferStream = new stream.PassThrough();
-  bufferStream.end(buffer);
-
-  const res = await drive.files.create({
-    requestBody: { name: fileName, parents: [targetFolder] },
-    media: { mimeType, body: bufferStream },
-    fields: 'id, name, webViewLink, webContentLink',
-  });
-
-  // 設為公開可讀，這樣 <img src="..."> 才能直接顯示
-  try {
-    await drive.permissions.create({
-      fileId: res.data.id,
-      requestBody: { role: 'reader', type: 'anyone' },
-    });
-  } catch (e) {
-    console.warn('makeFilePublic failed:', e.message);
-  }
-
-  return res.data;
-};
-
 const saveToLocal = (buffer, caseId, filename) => {
   try {
     const dir = path.join(uploadDir, caseId);
@@ -114,32 +62,31 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
   if (!caseResult.rows.length) return res.status(404).json({ error: '案件不存在' });
   const caseNumber = caseResult.rows[0].case_number;
 
-  const driveEnabled = isDriveEnabled();
+  const dropboxEnabled = isDropboxEnabled();
   const uploaded = [];
 
   for (const file of req.files) {
     const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
     let displayUrl = null;
-    let driveId = null;
-    let driveLink = null;
+    let driveId = null;    // 欄位沿用，改存 Dropbox path
+    let driveLink = null;  // 欄位沿用，改存 Dropbox 分享連結
 
-    if (driveEnabled) {
+    if (dropboxEnabled) {
       try {
-        const driveFile = await uploadBufferToDrivePhoto(file.buffer, file.originalname, phase, caseNumber);
-        driveId = driveFile.id;
-        driveLink = driveFile.webViewLink;
-        // 使用直接連結（公開後可直接顯示）
-        displayUrl = `https://drive.google.com/uc?export=view&id=${driveFile.id}`;
-        console.log(`✅ Drive upload OK: ${file.originalname} → ${driveLink}`);
-      } catch (driveErr) {
-        console.error(`❌ Drive upload failed: ${driveErr.message}`);
+        const dbxFile = await uploadPhoto(file.buffer, file.originalname, phase, caseNumber);
+        driveId = dbxFile.path;
+        driveLink = dbxFile.shareUrl;
+        displayUrl = dbxFile.shareUrl; // Dropbox ?raw=1 可直接顯示圖片
+        console.log(`✅ Dropbox upload OK: ${file.originalname}`);
+      } catch (dbxErr) {
+        console.error(`❌ Dropbox upload failed: ${dbxErr.message}`);
         const localPath = saveToLocal(file.buffer, req.params.caseId, uniqueName);
         displayUrl = localPath ? makeFullUrl(localPath) : null;
       }
     } else {
       const localPath = saveToLocal(file.buffer, req.params.caseId, uniqueName);
       displayUrl = localPath ? makeFullUrl(localPath) : null;
-      console.log(`ℹ️ Drive not enabled, saved locally`);
+      console.log('ℹ️ Dropbox not enabled, saved locally');
     }
 
     if (!displayUrl) { console.error(`Failed to save: ${file.originalname}`); continue; }
@@ -164,7 +111,7 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
     );
   }
 
-  res.json({ photos: uploaded, drive_enabled: driveEnabled });
+  res.json({ photos: uploaded, dropbox_enabled: dropboxEnabled });
 }));
 
 // GET /api/photos/:caseId
@@ -175,9 +122,7 @@ router.get('/:caseId', authenticate, asyncHandler(async (req, res) => {
   );
   const photos = result.rows.map(p => ({
     ...p,
-    file_url: p.drive_id
-      ? `https://drive.google.com/uc?export=view&id=${p.drive_id}`
-      : makeFullUrl(p.file_url)
+    file_url: p.file_url || makeFullUrl(p.file_url)
   }));
   res.json(photos);
 }));
@@ -188,10 +133,10 @@ router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
   if (!result.rows.length) return res.status(404).json({ error: '照片不存在' });
   const photo = result.rows[0];
 
-  if (photo.file_url && !photo.file_url.includes('drive.google.com')) {
+  // 嘗試刪除本地檔案（若有）
+  if (photo.file_url && photo.file_url.startsWith('/uploads')) {
     try {
-      let localUrl = photo.file_url.startsWith('http') ? new URL(photo.file_url).pathname : photo.file_url;
-      const filePath = path.join(process.cwd(), localUrl);
+      const filePath = path.join(process.cwd(), photo.file_url);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     } catch (e) { /* ignore */ }
   }

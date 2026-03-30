@@ -4,7 +4,7 @@ const { body, validationResult } = require('express-validator');
 const { query } = require('../../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
-const { uploadSignatureToDrive, uploadPdfToDrive, createCaseFolderStructure } = require('../utils/googleDrive');
+const { uploadSignature, uploadPdf, createCaseFolderStructure, isDropboxEnabled } = require('../utils/dropbox');
 
 const generateCaseNumber = async () => {
   const year = new Date().getFullYear();
@@ -211,15 +211,15 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
   const newCase = result.rows[0];
   await addActivity(newCase.id, req.user.id, req.user.name, 'created', `案件 ${caseNumber} 已建立`);
 
-  // 在 Drive 預先建立案件資料夾（非同步）
-  if (process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID && process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+  // 在 Dropbox 預先建立案件資料夾（非同步）
+  if (isDropboxEnabled()) {
     setImmediate(async () => {
       try {
-        const { caseFolderId } = await createCaseFolderStructure(caseNumber);
-        await query(`UPDATE cases SET drive_folder_id=$1 WHERE id=$2`, [caseFolderId, newCase.id]);
-        console.log(`✅ Drive folder created for ${caseNumber}`);
+        const { caseFolder } = await createCaseFolderStructure(caseNumber);
+        await query(`UPDATE cases SET drive_folder_id=$1 WHERE id=$2`, [caseFolder, newCase.id]);
+        console.log(`✅ Dropbox folder created for ${caseNumber}`);
       } catch (err) {
-        console.error('Drive folder creation error:', err.message);
+        console.error('Dropbox folder creation error:', err.message);
       }
     });
   }
@@ -327,8 +327,8 @@ router.post('/:id/sign', authenticate, asyncHandler(async (req, res) => {
   await addActivity(req.params.id, req.user.id, req.user.name, 'signed',
     `業主 ${signed_by.trim()} 已簽名確認完工`);
 
-  // 非同步：上傳簽名圖片和 PDF 到 Google Drive
-  if (process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID && process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+  // 非同步：上傳簽名圖片和 PDF 到 Dropbox
+  if (isDropboxEnabled()) {
     setImmediate(async () => {
       try {
         const caseDetail = await query(`
@@ -338,9 +338,9 @@ router.post('/:id/sign', authenticate, asyncHandler(async (req, res) => {
         const caseData = caseDetail.rows[0];
 
         // 1. 上傳簽名圖片
-        const sigDrive = await uploadSignatureToDrive(caseData.case_number, signature, req.params.id);
+        const sigFile = await uploadSignature(caseData.case_number, signature);
         await query(`UPDATE cases SET signature_drive_link=$1 WHERE id=$2`,
-          [sigDrive.webViewLink, req.params.id]);
+          [sigFile.shareUrl, req.params.id]);
 
         // 2. 取得案件記錄
         const notesResult = await query(`
@@ -352,14 +352,14 @@ router.post('/:id/sign', authenticate, asyncHandler(async (req, res) => {
         const pdfBuffer = await generateClosurePdf(caseData, notesResult.rows);
         const pdfFileName = `結案報告_${caseData.case_number}_${new Date().toISOString().slice(0,10)}.pdf`;
 
-        // 4. 上傳 PDF 到 Drive
-        const pdfDrive = await uploadPdfToDrive(caseData.case_number, pdfBuffer, pdfFileName);
+        // 4. 上傳 PDF 到 Dropbox
+        const pdfFile = await uploadPdf(caseData.case_number, pdfBuffer, pdfFileName);
         await query(`UPDATE cases SET drive_pdf_link=$1 WHERE id=$2`,
-          [pdfDrive.webViewLink, req.params.id]);
+          [pdfFile.shareUrl, req.params.id]);
 
-        console.log(`✅ Case ${caseData.case_number} closure PDF and signature uploaded to Drive`);
+        console.log(`✅ Case ${caseData.case_number} closure PDF and signature uploaded to Dropbox`);
       } catch (err) {
-        console.error('Drive closure upload error:', err.message);
+        console.error('Dropbox closure upload error:', err.message);
       }
     });
   }
