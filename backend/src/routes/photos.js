@@ -6,11 +6,10 @@ const { v4: uuidv4 } = require('uuid');
 const { query } = require('../../config/database');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
-const { isDropboxEnabled, uploadPhoto } = require('../utils/dropbox');
+const { isDropboxEnabled, uploadPhoto, createCaseFolderStructure, uploadBuffer } = require('../utils/dropbox');
 
 const BACKEND_URL = process.env.BACKEND_URL || 'https://repair-system-production-cf5b.up.railway.app';
 
-// 本地備份目錄（Railway ephemeral，僅暫時用）
 const uploadDir = path.join(process.cwd(), process.env.UPLOAD_DIR || 'uploads');
 try {
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
@@ -18,7 +17,6 @@ try {
   console.warn('Cannot create upload dir:', e.message);
 }
 
-// 使用 memoryStorage，不依賴本地磁碟
 const upload = multer({
   storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
@@ -65,18 +63,33 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
   const dropboxEnabled = isDropboxEnabled();
   const uploaded = [];
 
+  // 若 Dropbox 啟用，先建好資料夾結構（只建一次），再逐一上傳
+  let subFolders = null;
+  if (dropboxEnabled) {
+    try {
+      const structure = await createCaseFolderStructure(caseNumber);
+      subFolders = structure.subFolders;
+    } catch (err) {
+      console.error('❌ Dropbox folder creation failed:', err.message);
+    }
+  }
+
   for (const file of req.files) {
     const uniqueName = `${uuidv4()}${path.extname(file.originalname)}`;
     let displayUrl = null;
-    let driveId = null;    // 欄位沿用，改存 Dropbox path
-    let driveLink = null;  // 欄位沿用，改存 Dropbox 分享連結
+    let driveId = null;
+    let driveLink = null;
 
-    if (dropboxEnabled) {
+    if (dropboxEnabled && subFolders) {
       try {
-        const dbxFile = await uploadPhoto(file.buffer, file.originalname, phase, caseNumber);
+        // 直接上傳到已知的資料夾，不再重複建立
+        const folderMap = { before: subFolders.before, during: subFolders.during, after: subFolders.after };
+        const targetFolder = folderMap[phase] || subFolders.after;
+        const dbxFile = await uploadBuffer(file.buffer, `${targetFolder}/${file.originalname}`);
+
         driveId = dbxFile.path;
         driveLink = dbxFile.shareUrl;
-        displayUrl = dbxFile.shareUrl; // Dropbox ?raw=1 可直接顯示圖片
+        displayUrl = dbxFile.shareUrl;
         console.log(`✅ Dropbox upload OK: ${file.originalname}`);
       } catch (dbxErr) {
         console.error(`❌ Dropbox upload failed: ${dbxErr.message}`);
@@ -86,7 +99,6 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
     } else {
       const localPath = saveToLocal(file.buffer, req.params.caseId, uniqueName);
       displayUrl = localPath ? makeFullUrl(localPath) : null;
-      console.log('ℹ️ Dropbox not enabled, saved locally');
     }
 
     if (!displayUrl) { console.error(`Failed to save: ${file.originalname}`); continue; }
@@ -133,7 +145,6 @@ router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
   if (!result.rows.length) return res.status(404).json({ error: '照片不存在' });
   const photo = result.rows[0];
 
-  // 嘗試刪除本地檔案（若有）
   if (photo.file_url && photo.file_url.startsWith('/uploads')) {
     try {
       const filePath = path.join(process.cwd(), photo.file_url);

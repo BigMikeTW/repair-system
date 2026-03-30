@@ -12,7 +12,7 @@ const fs = require('fs');
 
 const BASE_FOLDER = '/工程報修系統';
 
-// ── Access Token 快取（每次重啟或過期後自動換新） ────────────
+// ── Access Token 快取 ────────────────────────────────────────
 let cachedAccessToken = null;
 let tokenExpiresAt = 0;
 
@@ -23,15 +23,14 @@ const getAccessToken = () => {
     const refreshToken = process.env.DROPBOX_REFRESH_TOKEN;
 
     if (!appKey || !appSecret || !refreshToken) {
-      return reject(new Error('Dropbox 環境變數未設定（需要 DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN）'));
+      return reject(new Error('Dropbox 環境變數未設定'));
     }
 
-    // 若 token 仍有效（還有 5 分鐘以上），直接回傳
+    // token 仍有效，直接回傳
     if (cachedAccessToken && Date.now() < tokenExpiresAt - 300000) {
       return resolve(cachedAccessToken);
     }
 
-    // 用 Refresh Token 換新的 Access Token
     const body = `grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`;
     const creds = Buffer.from(`${appKey}:${appSecret}`).toString('base64');
 
@@ -58,7 +57,7 @@ const getAccessToken = () => {
             console.log('✅ Dropbox access token refreshed');
             resolve(cachedAccessToken);
           } else {
-            reject(new Error(parsed.error_description || parsed.error || 'Token refresh failed'));
+            reject(new Error(parsed.error_description || 'Token refresh failed'));
           }
         } catch (e) {
           reject(new Error(`Token parse error: ${data}`));
@@ -101,7 +100,7 @@ const dropboxRequest = async (endpoint, body, isUpload = false, buffer = null) =
         try {
           const parsed = JSON.parse(data);
           if (res.statusCode >= 400) {
-            reject(new Error(parsed.error_summary || parsed.error || `HTTP ${res.statusCode}: ${data}`));
+            reject(new Error(parsed.error_summary || `HTTP ${res.statusCode}`));
           } else {
             resolve(parsed);
           }
@@ -112,7 +111,6 @@ const dropboxRequest = async (endpoint, body, isUpload = false, buffer = null) =
     });
 
     req.on('error', reject);
-
     if (isUpload && buffer) {
       req.write(buffer);
     } else if (bodyStr) {
@@ -138,6 +136,38 @@ const createFolder = async (folderPath) => {
   }
 };
 
+// ── 資料夾路徑快取（避免重複建立）───────────────────────────
+// key: caseNumber, value: { caseFolder, subFolders, createdAt }
+const folderCache = {};
+
+const createCaseFolderStructure = async (caseNumber) => {
+  // 若已快取且在 1 小時內，直接回傳
+  if (folderCache[caseNumber] && Date.now() - folderCache[caseNumber].createdAt < 3600000) {
+    return folderCache[caseNumber];
+  }
+
+  const caseFolder = `${BASE_FOLDER}/${caseNumber}`;
+  const subFolders = {
+    before:    `${caseFolder}/現場照片-施工前`,
+    during:    `${caseFolder}/現場照片-施工中`,
+    after:     `${caseFolder}/現場照片-施工後`,
+    signature: `${caseFolder}/結案簽收照片`,
+    notes:     `${caseFolder}/案件記錄`,
+    pdf:       `${caseFolder}/結案文件PDF`,
+  };
+
+  // 依序建立（避免並行建立父/子資料夾的競爭問題）
+  await createFolder(BASE_FOLDER);
+  await createFolder(caseFolder);
+  for (const p of Object.values(subFolders)) {
+    await createFolder(p);
+  }
+
+  const result = { caseFolder, subFolders, createdAt: Date.now() };
+  folderCache[caseNumber] = result;
+  return result;
+};
+
 // ── 取得公開分享連結 ─────────────────────────────────────────
 const getShareLink = async (filePath) => {
   try {
@@ -145,10 +175,10 @@ const getShareLink = async (filePath) => {
       path: filePath,
       settings: { requested_visibility: 'public', audience: 'public', access: 'viewer' }
     });
-    // ?raw=1 讓圖片可以直接在 <img> 顯示
-    return result.url.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '');
+    return result.url
+      .replace('www.dropbox.com', 'dl.dropboxusercontent.com')
+      .replace('?dl=0', '');
   } catch (err) {
-    // 連結已存在，改用 list 取得
     if (err.message && err.message.includes('shared_link_already_exists')) {
       const listResult = await dropboxRequest('sharing/list_shared_links', {
         path: filePath,
@@ -162,28 +192,6 @@ const getShareLink = async (filePath) => {
     }
     throw err;
   }
-};
-
-// ── 建立案件完整資料夾結構 ───────────────────────────────────
-const createCaseFolderStructure = async (caseNumber) => {
-  const caseFolder = `${BASE_FOLDER}/${caseNumber}`;
-
-  // 依序建立，避免父資料夾不存在的問題
-  await createFolder(BASE_FOLDER);
-  await createFolder(caseFolder);
-
-  const subFolders = {
-    before:    `${caseFolder}/現場照片-施工前`,
-    during:    `${caseFolder}/現場照片-施工中`,
-    after:     `${caseFolder}/現場照片-施工後`,
-    signature: `${caseFolder}/結案簽收照片`,
-    notes:     `${caseFolder}/案件記錄`,
-    pdf:       `${caseFolder}/結案文件PDF`,
-  };
-
-  // 並行建立子資料夾
-  await Promise.all(Object.values(subFolders).map(p => createFolder(p)));
-  return { caseFolder, subFolders };
 };
 
 // ── 上傳 Buffer 到 Dropbox ───────────────────────────────────
@@ -235,17 +243,17 @@ const uploadNotePhoto = async (caseNumber, buffer, fileName) => {
 
 // ── 確認 Dropbox 是否已設定 ──────────────────────────────────
 const isDropboxEnabled = () => {
-  const enabled = !!(
+  const ok = !!(
     process.env.DROPBOX_APP_KEY &&
     process.env.DROPBOX_APP_SECRET &&
     process.env.DROPBOX_REFRESH_TOKEN
   );
-  if (!enabled) {
+  if (!ok) {
     if (!process.env.DROPBOX_APP_KEY) console.warn('Dropbox: DROPBOX_APP_KEY not set');
     if (!process.env.DROPBOX_APP_SECRET) console.warn('Dropbox: DROPBOX_APP_SECRET not set');
     if (!process.env.DROPBOX_REFRESH_TOKEN) console.warn('Dropbox: DROPBOX_REFRESH_TOKEN not set');
   }
-  return enabled;
+  return ok;
 };
 
 module.exports = {
