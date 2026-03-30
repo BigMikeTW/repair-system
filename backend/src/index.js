@@ -123,9 +123,48 @@ const scheduleAutoBackup = () => {
   }, next2am - now);
 };
 
+// ── Auto Migration ────────────────────────────────────────────
+const runMigrations = async () => {
+  const { query } = require('./config/database');
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS closure_reports (
+        id SERIAL PRIMARY KEY,
+        closure_number VARCHAR(20) UNIQUE NOT NULL,
+        case_id INTEGER REFERENCES cases(id) ON DELETE SET NULL,
+        created_by INTEGER REFERENCES users(id),
+        summary TEXT, notes TEXT,
+        status VARCHAR(20) DEFAULT 'issued',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`
+      CREATE TABLE IF NOT EXISTS receipts (
+        id SERIAL PRIMARY KEY,
+        receipt_number VARCHAR(20) UNIQUE NOT NULL,
+        invoice_id INTEGER REFERENCES invoices(id) ON DELETE SET NULL,
+        amount NUMERIC(12,2) NOT NULL,
+        payment_date TIMESTAMPTZ DEFAULT NOW(),
+        payment_method VARCHAR(50) DEFAULT '銀行轉帳',
+        reference_number VARCHAR(100),
+        bank_account VARCHAR(100),
+        notes TEXT,
+        recorded_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await query(`ALTER TABLE invoices ADD COLUMN IF NOT EXISTS tax_rate NUMERIC(5,2) DEFAULT 5`);
+    console.log('✅ Database migrations completed');
+  } catch (e) {
+    console.error('⚠️ Migration warning:', e.message);
+  }
+};
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  await runMigrations();
   if (process.env.NODE_ENV !== 'test') scheduleAutoBackup();
 });
 

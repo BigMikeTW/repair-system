@@ -711,6 +711,18 @@ router.post('/closures', authenticate, authorize('admin','customer_service'), as
   res.status(201).json(result.rows[0]);
 }));
 
+// GET /api/finance/closures/by-case/:caseId/pdf  (必須在 /:id 之前)
+router.get('/closures/by-case/:caseId/pdf', authenticate, asyncHandler(async (req, res) => {
+  try {
+    const buf = await generateClosureReportPdf(req.params.caseId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="closure-${req.params.caseId}.pdf"`);
+    res.end(buf);
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+}));
+
 // GET /api/finance/closures/:id/pdf  (Signify品牌色調 結案報告)
 router.get('/closures/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   const cr = await query('SELECT * FROM closure_reports WHERE id=$1', [req.params.id]);
@@ -720,18 +732,6 @@ router.get('/closures/:id/pdf', authenticate, asyncHandler(async (req, res) => {
     const buf = await generateClosureReportPdf(cr.rows[0].case_id, cr.rows[0]);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${cr.rows[0].closure_number}.pdf"`);
-    res.end(buf);
-  } catch(e) {
-    res.status(500).json({ error: e.message });
-  }
-}));
-
-// GET /api/finance/closures/by-case/:caseId/pdf
-router.get('/closures/by-case/:caseId/pdf', authenticate, asyncHandler(async (req, res) => {
-  try {
-    const buf = await generateClosureReportPdf(req.params.caseId);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="closure-${req.params.caseId}.pdf"`);
     res.end(buf);
   } catch(e) {
     res.status(500).json({ error: e.message });
