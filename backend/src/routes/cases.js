@@ -386,4 +386,84 @@ router.get('/:id/activities', authenticate, asyncHandler(async (req, res) => {
   res.json(result.rows);
 }));
 
+// DELETE /api/cases/:id - 刪除案件（受權限管制）
+router.delete('/:id', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  const caseResult = await query('SELECT * FROM cases WHERE id=$1', [req.params.id]);
+  if (!caseResult.rows.length) return res.status(404).json({ error: '案件不存在' });
+
+  // 只有 admin 可刪除已派工/進行中案件，customer_service 只能刪除 pending/accepted
+  const c = caseResult.rows[0];
+  const restrictedStatuses = ['dispatched','in_progress','signing','completed','closed'];
+  if (req.user.role === 'customer_service' && restrictedStatuses.includes(c.status)) {
+    return res.status(403).json({ error: '無法刪除已派工或進行中的案件，請聯絡管理員' });
+  }
+
+  await query('DELETE FROM case_activities WHERE case_id=$1', [req.params.id]);
+  await query('DELETE FROM case_notes WHERE case_id=$1', [req.params.id]);
+  await query('DELETE FROM notifications WHERE case_id=$1', [req.params.id]);
+  await query('DELETE FROM cases WHERE id=$1', [req.params.id]);
+
+  res.json({ message: '案件已刪除', case_number: c.case_number });
+}));
+
+// PUT /api/cases/:id/cancel-dispatch - 取消派工
+router.put('/:id/cancel-dispatch', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  const { reason } = req.body;
+  const caseResult = await query('SELECT * FROM cases WHERE id=$1', [req.params.id]);
+  if (!caseResult.rows.length) return res.status(404).json({ error: '案件不存在' });
+  if (caseResult.rows[0].status !== 'dispatched') return res.status(400).json({ error: '只能取消派工中的案件' });
+
+  const result = await query(`
+    UPDATE cases SET status='accepted', assigned_engineer_id=NULL, assigned_by=NULL,
+      assigned_at=NULL, scheduled_start=NULL, scheduled_end=NULL
+    WHERE id=$1 RETURNING *
+  `, [req.params.id]);
+
+  await addActivity(req.params.id, req.user.id, req.user.name, 'dispatch_cancelled',
+    `派工已取消${reason ? '：' + reason : ''}`, { reason });
+
+  // 通知原工程師
+  if (caseResult.rows[0].assigned_engineer_id) {
+    await addNotification(caseResult.rows[0].assigned_engineer_id, '派工已取消',
+      `案件 ${caseResult.rows[0].case_number} 的派工已被取消`, 'warning', req.params.id);
+  }
+
+  res.json(result.rows[0]);
+}));
+
+// PUT /api/cases/:id/reassign - 派工變更（重新指派）
+router.put('/:id/reassign', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  const { engineer_id, scheduled_start, scheduled_end, notes, reason } = req.body;
+  if (!engineer_id) return res.status(400).json({ error: '請指定工程師' });
+
+  const caseResult = await query('SELECT * FROM cases WHERE id=$1', [req.params.id]);
+  if (!caseResult.rows.length) return res.status(404).json({ error: '案件不存在' });
+
+  const engResult = await query('SELECT * FROM users WHERE id=$1 AND role=$2', [engineer_id, 'engineer']);
+  if (!engResult.rows.length) return res.status(404).json({ error: '工程師不存在' });
+
+  const oldEngId = caseResult.rows[0].assigned_engineer_id;
+
+  const result = await query(`
+    UPDATE cases SET assigned_engineer_id=$1, assigned_by=$2, assigned_at=NOW(),
+      status='dispatched', scheduled_start=$3, scheduled_end=$4
+    WHERE id=$5 RETURNING *
+  `, [engineer_id, req.user.id, scheduled_start || null, scheduled_end || null, req.params.id]);
+
+  await addActivity(req.params.id, req.user.id, req.user.name, 'reassigned',
+    `派工已變更，新指派工程師：${engResult.rows[0].name}${reason ? '（原因：' + reason + '）' : ''}`,
+    { engineer_id, reason });
+
+  // 通知原工程師
+  if (oldEngId && oldEngId !== parseInt(engineer_id)) {
+    await addNotification(oldEngId, '任務已重新指派',
+      `案件 ${caseResult.rows[0].case_number} 已重新指派給其他工程師`, 'warning', req.params.id);
+  }
+  // 通知新工程師
+  await addNotification(engineer_id, '新任務指派',
+    `您有新的工程任務：${result.rows[0].case_number} - ${result.rows[0].title}`, 'info', req.params.id);
+
+  res.json(result.rows[0]);
+}));
+
 module.exports = router;

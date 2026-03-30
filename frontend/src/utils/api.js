@@ -53,8 +53,11 @@ export const casesAPI = {
   get: (id) => api.get(`/cases/${id}`),
   create: (data) => api.post('/cases', data),
   update: (id, data) => api.put(`/cases/${id}`, data),
+  delete: (id) => api.delete(`/cases/${id}`),
   updateStatus: (id, data) => api.put(`/cases/${id}/status`, data),
   assign: (id, data) => api.put(`/cases/${id}/assign`, data),
+  cancelDispatch: (id, data) => api.put(`/cases/${id}/cancel-dispatch`, data),
+  reassign: (id, data) => api.put(`/cases/${id}/reassign`, data),
   checkin: (id, data) => api.post(`/cases/${id}/checkin`, data),
   sign: (id, data) => api.post(`/cases/${id}/sign`, data),
   getActivities: (id) => api.get(`/cases/${id}/activities`),
@@ -106,6 +109,14 @@ export const financeAPI = {
   invoicePdf: (id) => `${BACKEND_URL}/api/finance/invoices/${id}/pdf`,
   getStats: () => api.get('/finance/stats'),
   getPayments: () => api.get('/finance/payments'),
+  // 結案單
+  getClosures: (params) => api.get('/finance/closures', { params }),
+  createClosure: (data) => api.post('/finance/closures', data),
+  closurePdf: (id) => `${BACKEND_URL}/api/finance/closures/${id}/pdf`,
+  closurePdfByCase: (caseId) => `${BACKEND_URL}/api/finance/closures/by-case/${caseId}/pdf`,
+  // 收款單
+  getReceipts: () => api.get('/finance/receipts'),
+  createReceipt: (data) => api.post('/finance/receipts', data),
 };
 
 // Users
