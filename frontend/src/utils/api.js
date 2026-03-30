@@ -5,7 +5,7 @@ const BACKEND_URL = 'https://repair-system-production-cf5b.up.railway.app';
 
 const api = axios.create({
   baseURL: `${BACKEND_URL}/api`,
-  timeout: 30000,
+  timeout: 60000,
   headers: { 'Content-Type': 'application/json' }
 });
 
@@ -63,8 +63,12 @@ export const casesAPI = {
 
 // Photos
 export const photosAPI = {
-  upload: (caseId, formData) => api.post(`/photos/${caseId}/upload`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+  upload: (caseId, formData, onProgress) => api.post(`/photos/${caseId}/upload`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+    onUploadProgress: (e) => {
+      if (onProgress && e.total) onProgress(Math.round((e.loaded * 100) / e.total));
+    }
   }),
   list: (caseId) => api.get(`/photos/${caseId}`),
   delete: (id) => api.delete(`/photos/${id}`),
