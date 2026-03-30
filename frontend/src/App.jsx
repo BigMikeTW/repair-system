@@ -20,6 +20,7 @@ import UserDetailPage from './pages/UserDetailPage';
 import BackupPage from './pages/BackupPage';
 import ProfilePage from './pages/ProfilePage';
 import CaseTypesPage from './pages/CaseTypesPage';
+import PermissionsPage from './pages/PermissionsPage';
 
 const PrivateRoute = ({ children, roles }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -50,6 +51,7 @@ export default function App() {
         <Route path="users" element={<PrivateRoute roles={['admin']}><UsersPage /></PrivateRoute>} />
         <Route path="users/:id" element={<PrivateRoute roles={['admin','customer_service']}><UserDetailPage /></PrivateRoute>} />
         <Route path="case-types" element={<PrivateRoute roles={['admin','customer_service']}><CaseTypesPage /></PrivateRoute>} />
+        <Route path="permissions" element={<PrivateRoute roles={['admin']}><PermissionsPage /></PrivateRoute>} />
         <Route path="backup" element={<PrivateRoute roles={['admin']}><BackupPage /></PrivateRoute>} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>

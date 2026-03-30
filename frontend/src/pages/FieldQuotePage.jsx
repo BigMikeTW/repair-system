@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import SignaturePad from 'signature_pad';
@@ -13,6 +13,8 @@ const TAX_RATE = 5;
 
 export default function FieldQuotePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preselectedCaseId = searchParams.get('case_id') || '';
   const { user } = useAuthStore();
   const canvasRef = useRef(null);
   const padRef = useRef(null);
@@ -22,7 +24,7 @@ export default function FieldQuotePage() {
 
   const { register, control, handleSubmit, watch, formState: { isSubmitting } } = useForm({
     defaultValues: {
-      case_id: '',
+      case_id: preselectedCaseId,
       tax_rate: TAX_RATE,
       notes: '',
       items: [{ item_name: '', description: '', quantity: 1, unit: '式', unit_price: 0 }]
@@ -165,7 +167,10 @@ export default function FieldQuotePage() {
           <h3 className="font-medium text-sm text-gray-700 border-b border-gray-100 pb-2">報價基本資訊</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="form-label">關聯案件（選填）</label>
+              <label className="form-label">
+                關聯案件
+                {preselectedCaseId && <span className="ml-2 text-xs text-success font-normal">✓ 已自動帶入</span>}
+              </label>
               <select {...register('case_id')} className="form-select">
                 <option value="">不關聯案件</option>
                 {activeCases.map(c => (

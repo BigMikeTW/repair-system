@@ -301,9 +301,16 @@ export default function FieldPage() {
         <h1 className="page-title">現場作業</h1>
         <div className="flex items-center gap-2">
           <span className="badge badge-primary text-xs">{user?.name}</span>
-          <Link to="/field-quote" className="btn btn-sm gap-1">
-            <FileText size={13} /> 現場報價單
-          </Link>
+          {activeCase && (
+            <Link to={`/field-quote?case_id=${activeCase.id}`} className="btn btn-sm gap-1">
+              <FileText size={13} /> 現場報價單
+            </Link>
+          )}
+          {!activeCase && (
+            <Link to="/field-quote" className="btn btn-sm gap-1">
+              <FileText size={13} /> 現場報價單
+            </Link>
+          )}
         </div>
       </div>
 

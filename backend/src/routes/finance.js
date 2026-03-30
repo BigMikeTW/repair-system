@@ -59,7 +59,7 @@ router.get('/quotations/:id', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/finance/quotations
-router.post('/quotations', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+router.post('/quotations', authenticate, authorize('admin','customer_service','engineer'), asyncHandler(async (req, res) => {
   const { case_id, items, tax_rate = 5, notes, valid_until } = req.body;
   if (!items || !items.length) return res.status(400).json({ error: '請填寫報價項目' });
 
