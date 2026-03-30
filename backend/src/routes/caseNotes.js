@@ -92,7 +92,9 @@ router.post('/:caseId', authenticate, authorize('engineer', 'admin', 'customer_s
 
       if (dropboxEnabled) {
         try {
-          const dbxFile = await uploadNotePhoto(c.case_number, file.buffer, file.originalname);
+          const ext = path.extname(file.originalname) || '.jpg';
+          const safeFileName = `${uuidv4()}${ext}`;
+          const dbxFile = await uploadNotePhoto(c.case_number, file.buffer, safeFileName);
           fileUrl = dbxFile.shareUrl;
           driveLink = dbxFile.shareUrl;
           console.log(`✅ Note photo uploaded to Dropbox: ${file.originalname}`);

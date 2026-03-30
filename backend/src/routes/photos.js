@@ -82,10 +82,12 @@ router.post('/:caseId/upload', authenticate, upload.array('photos', 10), asyncHa
 
     if (dropboxEnabled && subFolders) {
       try {
-        // 直接上傳到已知的資料夾，不再重複建立
+        // 用 UUID 當檔名，避免中文或特殊字元造成 header 錯誤
+        const ext = path.extname(file.originalname) || '.jpg';
+        const safeFileName = `${uuidv4()}${ext}`;
         const folderMap = { before: subFolders.before, during: subFolders.during, after: subFolders.after };
         const targetFolder = folderMap[phase] || subFolders.after;
-        const dbxFile = await uploadBuffer(file.buffer, `${targetFolder}/${file.originalname}`);
+        const dbxFile = await uploadBuffer(file.buffer, `${targetFolder}/${safeFileName}`);
 
         driveId = dbxFile.path;
         driveLink = dbxFile.shareUrl;

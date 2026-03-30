@@ -10,7 +10,7 @@ const https = require('https');
 const path = require('path');
 const fs = require('fs');
 
-const BASE_FOLDER = '/工程報修系統';
+const BASE_FOLDER = '/repair-system';
 
 // ── Access Token 快取 ────────────────────────────────────────
 let cachedAccessToken = null;
@@ -89,7 +89,12 @@ const dropboxRequest = async (endpoint, body, isUpload = false, buffer = null) =
     };
 
     if (isUpload && body) {
-      options.headers['Dropbox-API-Arg'] = JSON.stringify(body);
+      // 必須用 encodeURIComponent 處理中文字元，否則 header 會報錯
+      const argStr = JSON.stringify(body);
+      options.headers['Dropbox-API-Arg'] = argStr
+        .split('')
+        .map(c => c.charCodeAt(0) > 127 ? encodeURIComponent(c) : c)
+        .join('');
       if (buffer) options.headers['Content-Length'] = buffer.length;
     }
 
@@ -148,12 +153,12 @@ const createCaseFolderStructure = async (caseNumber) => {
 
   const caseFolder = `${BASE_FOLDER}/${caseNumber}`;
   const subFolders = {
-    before:    `${caseFolder}/現場照片-施工前`,
-    during:    `${caseFolder}/現場照片-施工中`,
-    after:     `${caseFolder}/現場照片-施工後`,
-    signature: `${caseFolder}/結案簽收照片`,
-    notes:     `${caseFolder}/案件記錄`,
-    pdf:       `${caseFolder}/結案文件PDF`,
+    before:    `${caseFolder}/photos-before`,
+    during:    `${caseFolder}/photos-during`,
+    after:     `${caseFolder}/photos-after`,
+    signature: `${caseFolder}/signature`,
+    notes:     `${caseFolder}/notes`,
+    pdf:       `${caseFolder}/pdf`,
   };
 
   // 依序建立（避免並行建立父/子資料夾的競爭問題）
