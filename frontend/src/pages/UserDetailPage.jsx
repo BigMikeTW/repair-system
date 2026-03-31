@@ -671,7 +671,7 @@ export default function UserDetailPage() {
       )}
 
       {/* LINE 綁定管理 */}
-      <LineBindAdmin userId={id} userName={hrData?.user?.name || ''} />
+      <LineBindAdmin userId={id} userName={data?.user?.name || ''} />
 
       {/* Modals */}
       {licenseModal && (
