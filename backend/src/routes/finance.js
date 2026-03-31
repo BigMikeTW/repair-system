@@ -5,6 +5,7 @@ const path = require('path');
 const { query } = require('../../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
+const pdf = require('../utils/pdfGenerator');
 
 const generateQuoteNumber = async () => {
   const year = new Date().getFullYear();
@@ -583,17 +584,106 @@ router.put('/quotations/:id/status', authenticate, authorize('admin','customer_s
   res.json(result.rows[0]);
 }));
 
-// GET /api/finance/quotations/:id/pdf  (科技風)
+// GET /api/finance/quotations/:id/pdf
 router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) => {
-  try {
-    const buf = await generateQuotationPdfBuffer(req.params.id);
-    const q = await query('SELECT quote_number FROM quotations WHERE id=$1', [req.params.id]);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${q.rows[0]?.quote_number || 'quotation'}.pdf"`);
-    res.end(buf);
-  } catch (e) {
-    res.status(404).json({ error: e.message });
-  }
+  const bw = req.query.bw === '1';
+  const company = req.query.company || '皇祥工程設計';
+  const qr = await query(`
+    SELECT qt.*, c.case_number, c.owner_name, c.owner_company, c.owner_phone,
+      c.location_address, c.title
+    FROM quotations qt LEFT JOIN cases c ON qt.case_id=c.id WHERE qt.id=$1
+  `, [req.params.id]);
+  if (!qr.rows.length) return res.status(404).json({ error: '報價單不存在' });
+  const q = qr.rows[0];
+  const items = await query(`SELECT * FROM quotation_items WHERE quotation_id=$1 ORDER BY sort_order`, [req.params.id]);
+
+  await pdf.ensureChineseFont();
+  const doc = pdf.newDoc(require('/tmp/WQY.ttf') ? null : null);
+  const chunks = [];
+  doc.on('data', c => chunks.push(c));
+
+  pdf.drawPage(doc, {
+    titleZh: '報  價  單', titleEn: 'QUOTATION',
+    docNumber: q.quote_number, dateStr: pdf.fmt(q.created_at),
+    extraRight: q.valid_until ? `VALID  ${pdf.fmt(q.valid_until)}` : null,
+    company,
+  });
+
+  pdf.sectionLabel(doc, 'CLIENT INFORMATION');
+  pdf.clientBlock(doc, [
+    { label:'業主 / 公司', value: q.owner_company||q.owner_name, label2:'案件編號', value2: q.case_number||'—' },
+    { label:'聯  絡  人',  value: q.owner_name,                  label2:'電      話', value2: q.owner_phone||'—' },
+    { label:'施工地址',    value: q.location_address||'—',       label2:'有效期限', value2: pdf.fmt(q.valid_until) },
+  ]);
+
+  doc.y += 4;
+  pdf.sectionLabel(doc, 'QUOTATION DETAILS');
+
+  // 表頭
+  const cw=[142,124,42,39,74,62];
+  const ths=['項  目  名  稱','說  明','數量','單位','單  價','小  計'];
+  let ty=doc.y;
+  cw.forEach((w,i)=>{
+    doc.rect(pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0),ty,w,18).fill(pdf.C.dark);
+    doc.font('Helvetica').fontSize(8.5).fillColor(pdf.C.sub)
+       .text(ths[i],pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0)+5,ty+5,{width:w-8,lineBreak:false,align:i>=2?'center':'left'});
+  });
+  doc.rect(pdf.LM,ty,pdf.CW,18).stroke(pdf.C.border);
+  doc.y=ty+18;
+
+  items.rows.forEach((item,idx)=>{
+    const rh=20; let ry=doc.y;
+    doc.rect(pdf.LM,ry,pdf.CW,rh).fill(idx%2===0?pdf.C.row:pdf.C.white);
+    const row=[item.item_name,item.description,item.quantity,item.unit,
+               pdf.money(item.unit_price),pdf.money(parseFloat(item.unit_price)*parseFloat(item.quantity))];
+    cw.forEach((w,i)=>{
+      const x=pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0);
+      doc.font(i===5?'Helvetica-Bold':'Helvetica').fontSize(i===0?10:9)
+         .fillColor(pdf.C.dark)
+         .text(row[i]||'',x+5,ry+5,{width:w-8,lineBreak:false,align:i>=2?'center':'left'});
+    });
+    doc.rect(pdf.LM,ry+rh-0.3,pdf.CW,0.3).fill(pdf.C.border);
+    doc.y=ry+rh;
+  });
+  doc.rect(pdf.LM,ty,pdf.CW,doc.y-ty).stroke(pdf.C.border);
+  doc.y+=5;
+
+  // 合計
+  const taxRate=parseFloat(q.tax_rate||5);
+  const sub=parseFloat(q.subtotal||0), tax=parseFloat(q.tax_amount||0), tot=parseFloat(q.total||0);
+  [[`小計 SUBTOTAL`,pdf.money(sub)],[`稅金 TAX (${taxRate}%)`,pdf.money(tax)]].forEach(([l,v])=>{
+    doc.font('Helvetica').fontSize(8.5).fillColor(pdf.C.sub)
+       .text(l,0,doc.y,{width:pdf.W-pdf.RM-2,align:'right',lineBreak:false});
+    doc.font('Helvetica').fontSize(10).fillColor(pdf.C.mid)
+       .text(v,0,doc.y-doc.currentLineHeight(),{width:pdf.W-pdf.RM-2,align:'right',lineBreak:false});
+    doc.y+=15;
+  });
+  // 總計框
+  const totY=doc.y;
+  doc.rect(pdf.LM,totY,pdf.CW,26).fillAndStroke(pdf.C.label,pdf.C.acc);
+  doc.rect(pdf.LM,totY,pdf.CW-1,1.5).fill(pdf.C.acc);
+  doc.font('Helvetica-Bold').fontSize(12).fillColor(pdf.C.dark)
+     .text('報價總金額 TOTAL',pdf.LM+12,totY+7,{lineBreak:false});
+  doc.font('Helvetica-Bold').fontSize(15).fillColor(pdf.C.acc)
+     .text(pdf.money(tot),0,totY+5,{width:pdf.W-pdf.RM-10,align:'right',lineBreak:false});
+  doc.y=totY+32;
+
+  if (q.notes) { pdf.notesBlock(doc, q.notes); }
+
+  // 客戶簽名框
+  doc.y+=3;
+  pdf.sigBox(doc, {
+    label: '客 戶 確 認 簽 名',
+    confirmText: '本人／本公司確認已閱讀上述報價內容，同意上述報價金額及條件。',
+    dateStr: '', width:255, height:55,
+  });
+
+  doc.end();
+  await new Promise(r => doc.on('end', r));
+  const buf = Buffer.concat(chunks);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${q.quote_number}.pdf"`);
+  res.end(buf);
 }));
 
 // ===== INVOICES =====
@@ -661,17 +751,93 @@ router.get('/stats', authenticate, authorize('admin','customer_service'), asyncH
   res.json(result.rows[0]);
 }));
 
-// GET /api/finance/invoices/:id/pdf  (科技風)
+// GET /api/finance/invoices/:id/pdf
 router.get('/invoices/:id/pdf', authenticate, asyncHandler(async (req, res) => {
-  try {
-    const buf = await generateInvoicePdfBuffer(req.params.id);
-    const inv = await query('SELECT invoice_number FROM invoices WHERE id=$1', [req.params.id]);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${inv.rows[0]?.invoice_number || 'invoice'}.pdf"`);
-    res.end(buf);
-  } catch(e) {
-    res.status(404).json({ error: e.message });
-  }
+  const company = req.query.company || '皇祥工程設計';
+  const ir = await query(`
+    SELECT inv.*, c.case_number, c.owner_name, c.owner_company, c.owner_phone,
+      c.location_address, c.signed_by, c.signed_at, c.completion_notes,
+      c.checkin_time, c.assigned_at, c.created_at as case_created_at,
+      u.name as engineer_name
+    FROM invoices inv
+    LEFT JOIN cases c ON inv.case_id=c.id
+    LEFT JOIN users u ON c.assigned_engineer_id=u.id
+    WHERE inv.id=$1
+  `, [req.params.id]);
+  if (!ir.rows.length) return res.status(404).json({ error: '請款單不存在' });
+  const inv = ir.rows[0];
+
+  await pdf.ensureChineseFont();
+  const doc = pdf.newDoc(null);
+  const chunks = [];
+  doc.on('data', c => chunks.push(c));
+
+  pdf.drawPage(doc, {
+    titleZh:'請  款  單', titleEn:'INVOICE',
+    docNumber: inv.invoice_number, dateStr: pdf.fmt(inv.created_at),
+    extraRight: inv.due_date ? `DUE  ${pdf.fmt(inv.due_date)}` : null,
+    company,
+  });
+
+  pdf.sectionLabel(doc, 'CLIENT INFORMATION');
+  pdf.clientBlock(doc, [
+    {label:'業主 / 公司',value:inv.owner_company||inv.owner_name,label2:'案件編號',value2:inv.case_number||'—'},
+    {label:'聯  絡  人', value:inv.owner_name,                   label2:'電      話', value2:inv.owner_phone||'—'},
+    {label:'施工地址',   value:inv.location_address||'—',        label2:'負責工程師',value2:inv.engineer_name||'—'},
+  ]);
+
+  doc.y+=5;
+  pdf.sectionLabel(doc, 'BILLING SUMMARY');
+
+  // 明細
+  const brows=[['項目','金額'],['工程費用',pdf.money(inv.amount)],[`稅金 (${inv.tax_rate||5}%)`,pdf.money(inv.tax_amount)]];
+  let btY=doc.y;
+  brows.forEach((row,i)=>{
+    const rh=i===0?18:20; const bg=i===0?pdf.C.dark:(i%2===0?pdf.C.row:pdf.C.white);
+    doc.rect(pdf.LM,btY,pdf.CW,rh).fill(bg);
+    doc.font(i===0?'Helvetica':'Helvetica').fontSize(i===0?8.5:10)
+       .fillColor(i===0?pdf.C.sub:pdf.C.dark)
+       .text(row[0],pdf.LM+8,btY+(i===0?5:5),{lineBreak:false});
+    doc.font(i===0?'Helvetica':'Helvetica').fontSize(i===0?8.5:10)
+       .fillColor(i===0?pdf.C.sub:pdf.C.dark)
+       .text(row[1],0,btY+(i===0?5:5),{width:pdf.W-pdf.RM-10,align:'right',lineBreak:false});
+    if(i>0) doc.rect(pdf.LM,btY+rh-0.3,pdf.CW,0.3).fill(pdf.C.border);
+    btY+=rh;
+  });
+  doc.rect(pdf.LM,doc.y,pdf.CW,btY-doc.y).stroke(pdf.C.border);
+  doc.y=btY+5;
+
+  // 總金額框
+  const tY=doc.y;
+  doc.rect(pdf.LM,tY,pdf.CW,30).fillAndStroke(pdf.C.label,pdf.C.acc);
+  doc.rect(pdf.LM,tY,5,30).fill(pdf.C.acc);
+  doc.font('Helvetica-Bold').fontSize(12).fillColor(pdf.C.dark)
+     .text('請  款  總  金  額',pdf.LM+14,tY+9,{lineBreak:false});
+  doc.font('Helvetica-Bold').fontSize(18).fillColor(pdf.C.acc)
+     .text(pdf.money(inv.total_amount),0,tY+6,{width:pdf.W-pdf.RM-10,align:'right',lineBreak:false});
+  doc.y=tY+38;
+
+  pdf.sectionLabel(doc,'TIME RECORDS');
+  pdf.timeRecord(doc,{
+    created_at: inv.case_created_at, assigned_at: inv.assigned_at,
+    checkin_time: inv.checkin_time, signed_at: inv.signed_at,
+  });
+
+  pdf.sectionLabel(doc,'CLIENT SIGN-OFF');
+  pdf.signoff(doc,{signed_by:inv.signed_by, completion_notes:inv.completion_notes});
+
+  doc.y+=3;
+  pdf.sigBox(doc,{label:'業 主 簽 名 欄',dateStr:pdf.fmt(inv.signed_at),width:255,height:56});
+
+  if(inv.notes) { pdf.notesBlock(doc, '付款方式：銀行轉帳。請於付款期限前完成匯款，如有疑問請聯繫客服。'); }
+  else { pdf.notesBlock(doc, '付款方式：銀行轉帳。請於付款期限前完成匯款，如有疑問請聯繫客服。'); }
+
+  doc.end();
+  await new Promise(r => doc.on('end', r));
+  const buf = Buffer.concat(chunks);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${inv.invoice_number}.pdf"`);
+  res.end(buf);
 }));
 
 // ===== CLOSURE REPORTS (結案單) =====
@@ -723,19 +889,85 @@ router.get('/closures/by-case/:caseId/pdf', authenticate, asyncHandler(async (re
   }
 }));
 
-// GET /api/finance/closures/:id/pdf  (皇祥工程設計品牌色調 結案報告)
+// GET /api/finance/closures/:id/pdf
 router.get('/closures/:id/pdf', authenticate, asyncHandler(async (req, res) => {
-  const cr = await query('SELECT * FROM closure_reports WHERE id=$1', [req.params.id]);
-  if (!cr.rows.length) return res.status(404).json({ error: '結案單不存在' });
+  const company = req.query.company || '皇祥工程設計';
+  const crr = await query(`
+    SELECT cr.*, c.case_number, c.title, c.owner_name, c.owner_company, c.owner_phone,
+      c.location_address, c.signed_by, c.signed_at, c.completion_notes,
+      c.checkin_time, c.assigned_at, c.created_at as case_created_at,
+      u.name as engineer_name
+    FROM closure_reports cr
+    LEFT JOIN cases c ON cr.case_id=c.id
+    LEFT JOIN users u ON c.assigned_engineer_id=u.id
+    WHERE cr.id=$1
+  `, [req.params.id]);
+  if (!crr.rows.length) return res.status(404).json({ error: '結案單不存在' });
+  const cr = crr.rows[0];
 
-  try {
-    const buf = await generateClosureReportPdf(cr.rows[0].case_id, cr.rows[0]);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${cr.rows[0].closure_number}.pdf"`);
-    res.end(buf);
-  } catch(e) {
-    res.status(500).json({ error: e.message });
+  const notesRes = await query(`
+    SELECT cn.*, u.name as author_name FROM case_notes cn
+    LEFT JOIN users u ON cn.author_id=u.id
+    WHERE cn.case_id=$1 ORDER BY cn.created_at
+  `, [cr.case_id]);
+
+  await pdf.ensureChineseFont();
+  const doc = pdf.newDoc(null);
+  const chunks = [];
+  doc.on('data', c => chunks.push(c));
+
+  pdf.drawPage(doc, {
+    titleZh:'結  案  報  告', titleEn:'CLOSURE REPORT',
+    docNumber: cr.closure_number, dateStr: pdf.fmt(cr.created_at),
+    extraRight: null, company,
+  });
+
+  pdf.sectionLabel(doc,'CLIENT INFORMATION');
+  pdf.clientBlock(doc,[
+    {label:'業主 / 公司',value:cr.owner_company||cr.owner_name,label2:'案件編號',value2:cr.case_number||'—'},
+    {label:'聯  絡  人', value:cr.owner_name,                  label2:'電      話',value2:cr.owner_phone||'—'},
+    {label:'施工地址',   value:cr.location_address||'—',       label2:'負責工程師',value2:cr.engineer_name||'—'},
+  ]);
+
+  doc.y+=5;
+  pdf.sectionLabel(doc,'TIME RECORDS');
+  pdf.timeRecord(doc,{
+    created_at:cr.case_created_at, assigned_at:cr.assigned_at,
+    checkin_time:cr.checkin_time, signed_at:cr.signed_at,
+  });
+
+  if (notesRes.rows.length) {
+    doc.y+=3;
+    pdf.sectionLabel(doc,'FIELD WORK RECORDS');
+    notesRes.rows.forEach((note,i)=>{
+      if (doc.y > 740) { doc.addPage(); doc.y=30; }
+      const rh=48; const y=doc.y;
+      doc.rect(pdf.LM,y,10,rh).fill(pdf.C.acc);
+      doc.rect(pdf.LM+10,y,pdf.CW-10,rh).fill(i%2===0?pdf.C.row:pdf.C.white);
+      doc.font('Helvetica-Bold').fontSize(10).fillColor(pdf.C.white)
+         .text(String(i+1),pdf.LM,y+17,{width:10,align:'center',lineBreak:false});
+      doc.font('Helvetica').fontSize(8).fillColor(pdf.C.sub)
+         .text(`${pdf.fmt(note.created_at)}  ·  ${note.author_name||'—'}`,pdf.LM+18,y+6,{lineBreak:false});
+      doc.font('Helvetica').fontSize(10).fillColor(pdf.C.dark)
+         .text(note.content||'',pdf.LM+18,y+20,{width:pdf.CW-28,lineBreak:true});
+      doc.rect(pdf.LM,y+rh-0.3,pdf.CW,0.3).fill(pdf.C.border);
+      doc.y=y+rh;
+    });
+    doc.y+=5;
   }
+
+  pdf.sectionLabel(doc,'CLIENT SIGN-OFF');
+  pdf.signoff(doc,{signed_by:cr.signed_by||'—',completion_notes:cr.completion_notes||cr.notes||'—'});
+
+  doc.y+=3;
+  pdf.sigBox(doc,{label:'業 主 簽 名 欄',dateStr:pdf.fmt(cr.signed_at),width:255,height:60});
+
+  doc.end();
+  await new Promise(r => doc.on('end', r));
+  const buf = Buffer.concat(chunks);
+  res.setHeader('Content-Type','application/pdf');
+  res.setHeader('Content-Disposition',`attachment; filename="${cr.closure_number}.pdf"`);
+  res.end(buf);
 }));
 
 // ===== RECEIPTS (收款單) =====
