@@ -21,12 +21,33 @@ const MODULES = [
   { key: 'users',    label: '人員管理',   desc: '人員帳號資料的修改與停用' },
 ];
 
-const ROLES = [
-  { key: 'admin',            label: '系統管理員', color: 'text-purple-600 bg-purple-50' },
-  { key: 'customer_service', label: '客服人員',   color: 'text-blue-600 bg-blue-50' },
-  { key: 'engineer',         label: '工程師',     color: 'text-teal-600 bg-teal-50' },
-  { key: 'owner',            label: '業主',       color: 'text-gray-600 bg-gray-50' },
-];
+const BASE_ROLE_COLORS = {
+  purple: 'text-purple-600 bg-purple-50',
+  blue: 'text-blue-600 bg-blue-50',
+  teal: 'text-teal-600 bg-teal-50',
+  green: 'text-green-600 bg-green-50',
+  orange: 'text-orange-600 bg-orange-50',
+  gray: 'text-gray-600 bg-gray-50',
+};
+
+// 動態從 SystemSettings 讀取角色
+const getRoles = () => {
+  try {
+    const saved = localStorage.getItem('custom_roles');
+    if (saved) return JSON.parse(saved).map(r => ({
+      ...r,
+      color: BASE_ROLE_COLORS[r.color] || 'text-gray-600 bg-gray-50',
+    }));
+  } catch {}
+  return [
+    { key: 'admin',            label: '系統管理員', color: 'text-purple-600 bg-purple-50', modules: null },
+    { key: 'customer_service', label: '客服人員',   color: 'text-blue-600 bg-blue-50', modules: ['cases','photos','finance','notes','dispatch'] },
+    { key: 'engineer',         label: '工程師',     color: 'text-teal-600 bg-teal-50', modules: ['cases','photos','notes'] },
+    { key: 'owner',            label: '業主',       color: 'text-gray-600 bg-gray-50', modules: ['cases'] },
+  ];
+};
+
+const ROLES = getRoles();
 
 const STORAGE_KEY = 'repair_system_permissions';
 
@@ -58,6 +79,9 @@ export default function PermissionsPage() {
   const toggle = (module, role, action) => {
     // 系統管理員的 edit 不可關閉
     if (role === 'admin' && action === 'edit') return;
+    // 若角色無此模組存取權，不可開啟
+    const roleData = ROLES.find(r => r.key === role);
+    if (roleData?.modules && !roleData.modules.includes(module)) return;
     setPerms(prev => {
       const next = JSON.parse(JSON.stringify(prev));
       next[module] = next[module] || {};
@@ -146,8 +170,15 @@ export default function PermissionsPage() {
                   {ROLES.map(role => {
                     const modPerms = perms[mod.key]?.[role.key] || {};
                     const isAdmin = role.key === 'admin';
+                    // Check if role has module access
+                    const hasModuleAccess = isAdmin || !role.modules || role.modules.includes(mod.key);
                     return (
                       <td key={role.key} className="px-4 py-4">
+                        {!hasModuleAccess ? (
+                          <div className="flex justify-center">
+                            <span className="text-xs text-gray-300 bg-gray-50 px-2 py-1 rounded">無模組權限</span>
+                          </div>
+                        ) : (
                         <div className="flex flex-col items-center gap-2">
                           {/* 修改 */}
                           <label className={`flex items-center gap-1.5 text-xs cursor-pointer select-none ${isAdmin ? 'opacity-60 cursor-not-allowed' : ''}`}>
@@ -170,6 +201,7 @@ export default function PermissionsPage() {
                             <span className={modPerms.delete ? 'text-danger' : 'text-gray-400'}>刪除</span>
                           </label>
                         </div>
+                        )}
                       </td>
                     );
                   })}

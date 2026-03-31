@@ -21,6 +21,7 @@ import BackupPage from './pages/BackupPage';
 import ProfilePage from './pages/ProfilePage';
 import CaseTypesPage from './pages/CaseTypesPage';
 import PermissionsPage from './pages/PermissionsPage';
+import SystemSettingsPage from './pages/SystemSettingsPage';
 import PublicReportPage from './pages/PublicReportPage';
 import PublicTrackPage from './pages/PublicTrackPage';
 
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="users/:id" element={<PrivateRoute roles={['admin','customer_service']}><UserDetailPage /></PrivateRoute>} />
         <Route path="case-types" element={<PrivateRoute roles={['admin','customer_service']}><CaseTypesPage /></PrivateRoute>} />
         <Route path="permissions" element={<PrivateRoute roles={['admin']}><PermissionsPage /></PrivateRoute>} />
+        <Route path="settings" element={<PrivateRoute roles={['admin']}><SystemSettingsPage /></PrivateRoute>} />
         <Route path="backup" element={<PrivateRoute roles={['admin']}><BackupPage /></PrivateRoute>} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>

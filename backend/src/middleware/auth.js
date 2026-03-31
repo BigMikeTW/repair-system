@@ -3,11 +3,15 @@ const { query } = require('../../config/database');
 
 const authenticate = async (req, res, next) => {
   try {
+    // Support token from Authorization header OR query string (for PDF links)
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    let token = req.query.token || null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    if (!token) {
       return res.status(401).json({ error: '未授權，請先登入' });
     }
-    const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const result = await query(
       'SELECT id, name, email, role, phone, specialties, avatar_url, is_active FROM users WHERE id = $1',

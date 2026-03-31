@@ -38,7 +38,8 @@ const navConfig = [
     section: '系統管理',
     items: [
       { to: '/users', icon: Shield, label: '人員管理', roles: ['admin'] },
-      { to: '/permissions', icon: Settings, label: '權限設定', roles: ['admin'] },
+      { to: '/settings', icon: Settings, label: '功能設定', roles: ['admin'] },
+      { to: '/permissions', icon: Shield, label: '權限設定', roles: ['admin'] },
       { to: '/case-types', icon: Tag, label: '報修類型', roles: ['admin','customer_service'] },
       { to: '/backup', icon: Database, label: '備份記錄', roles: ['admin'] },
     ]

@@ -8,6 +8,13 @@ import toast from 'react-hot-toast';
 
 const TAX_RATE = 5;
 
+// ── 取得預設收款帳號 ──────────────────────────────────────────
+const getDefaultBankAccounts = () => {
+  try {
+    return JSON.parse(localStorage.getItem('default_bank_accounts') || '[]');
+  } catch { return []; }
+};
+
 // ── 報價單建立表單 ──────────────────────────────────────────────────────────────
 function QuotationForm({ onClose, onSuccess }) {
   const { register, control, handleSubmit, watch, formState: { isSubmitting } } = useForm({
@@ -16,7 +23,8 @@ function QuotationForm({ onClose, onSuccess }) {
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
   const watchItems = watch('items');
   const subtotal = watchItems.reduce((s, i) => s + (parseFloat(i.unit_price) || 0) * (parseFloat(i.quantity) || 0), 0);
-  const tax = subtotal * (TAX_RATE / 100);
+  const taxRate = parseFloat(watch('tax_rate')) || TAX_RATE;
+  const tax = subtotal * (taxRate / 100);
 
   const { data: cases } = useQuery('allCasesForQuote', () =>
     casesAPI.list({ limit: 200 }).then(r => r.data)
@@ -88,7 +96,7 @@ function QuotationForm({ onClose, onSuccess }) {
           <div className="flex justify-end">
             <div className="text-sm space-y-1 w-48">
               <div className="flex justify-between"><span className="text-gray-500">小計</span><span>{formatMoney(subtotal)}</span></div>
-              <div className="flex justify-between"><span className="text-gray-500">稅金 ({TAX_RATE}%)</span><span>{formatMoney(tax)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-500">稅金 ({taxRate}%)</span><span>{formatMoney(tax)}</span></div>
               <div className="flex justify-between font-semibold text-primary-dark border-t border-gray-100 pt-1"><span>合計</span><span>{formatMoney(subtotal + tax)}</span></div>
             </div>
           </div>
@@ -154,7 +162,7 @@ function ClosureForm({ onClose, onSuccess }) {
             <textarea {...register('notes')} className="form-textarea" rows={3} placeholder="其他備注、後續建議維護事項..." />
           </div>
           <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
-            建立結案單後，關聯案件狀態將自動更新為「已結案」，並可產出 Signify 品牌色調的結案報告 PDF。
+            建立結案單後，案件狀態將自動更新為「已結案」，可產出 Signify 品牌色調的結案報告 PDF。
           </div>
           <div className="flex justify-end gap-3">
             <button type="button" className="btn" onClick={onClose}>取消</button>
@@ -171,12 +179,17 @@ function InvoiceForm({ onClose, onSuccess }) {
   const { register, handleSubmit, watch, formState: { isSubmitting } } = useForm({ defaultValues: { tax_rate: TAX_RATE } });
   const amount = parseFloat(watch('amount')) || 0;
   const taxRate = parseFloat(watch('tax_rate')) || TAX_RATE;
+  const selectedCaseId = watch('case_id');
 
   const { data: cases } = useQuery('casesForInv', () =>
     casesAPI.list({ limit: 200 }).then(r => r.data)
   );
-  const { data: quotations } = useQuery('quotationsForInv', () =>
-    financeAPI.getQuotations({ status: 'approved' }).then(r => r.data)
+
+  // 關聯案件的報價單（單身關聯）
+  const { data: caseQuotations } = useQuery(
+    ['quotationsForCase', selectedCaseId],
+    () => financeAPI.getQuotations({ case_id: selectedCaseId }).then(r => r.data),
+    { enabled: !!selectedCaseId }
   );
 
   const onSubmit = async (data) => {
@@ -205,15 +218,26 @@ function InvoiceForm({ onClose, onSuccess }) {
               ))}
             </select>
           </div>
-          <div>
-            <label className="form-label">關聯報價單（選填）</label>
-            <select {...register('quotation_id')} className="form-select">
-              <option value="">不關聯</option>
-              {quotations?.map(q => (
-                <option key={q.id} value={q.id}>{q.quote_number} - {formatMoney(q.total)}</option>
-              ))}
-            </select>
-          </div>
+
+          {/* 報價單關聯在單身（選擇案件後才顯示） */}
+          {selectedCaseId && (
+            <div className="bg-gray-50 rounded-lg p-3">
+              <label className="form-label mb-2">關聯報價單（選填）</label>
+              {caseQuotations?.length > 0 ? (
+                <select {...register('quotation_id')} className="form-select">
+                  <option value="">不關聯報價單</option>
+                  {caseQuotations.map(q => (
+                    <option key={q.id} value={q.id}>
+                      {q.quote_number} - {formatMoney(q.total)} ({q.status === 'approved' ? '已核准' : q.status === 'sent' ? '已發送' : '草稿'})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-xs text-gray-400">此案件尚無報價單</p>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="form-label">請款金額 *</label>
@@ -251,6 +275,8 @@ function ReceiptForm({ onClose, onSuccess }) {
   const { register, handleSubmit, formState: { isSubmitting } } = useForm({
     defaultValues: { payment_method: '銀行轉帳', payment_date: new Date().toISOString().slice(0, 10) }
   });
+
+  const defaultAccounts = getDefaultBankAccounts();
 
   const { data: invoices } = useQuery('pendingInvoicesForReceipt', () =>
     financeAPI.getInvoices({ status: 'pending' }).then(r => r.data)
@@ -312,7 +338,18 @@ function ReceiptForm({ onClose, onSuccess }) {
           </div>
           <div>
             <label className="form-label">入帳帳號</label>
-            <input {...register('bank_account')} className="form-control" placeholder="選填" />
+            {defaultAccounts.length > 0 ? (
+              <select {...register('bank_account')} className="form-select">
+                <option value="">選擇或自行輸入</option>
+                {defaultAccounts.map((acc, i) => (
+                  <option key={i} value={`${acc.bank_name} ${acc.account_number}`}>
+                    {acc.bank_name} - {acc.account_number}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input {...register('bank_account')} className="form-control" placeholder="選填，可至功能設定新增預設帳號" />
+            )}
           </div>
           <div>
             <label className="form-label">備注</label>
@@ -370,7 +407,6 @@ export default function FinancePage() {
         </button>
       </div>
 
-      {/* Tab bar */}
       <div className="flex gap-0 mb-4 border-b border-gray-100">
         {TABS.map(({ key, label, icon: Icon, count }) => (
           <button key={key} onClick={() => setTab(key)}
@@ -483,7 +519,7 @@ export default function FinancePage() {
         <div className="card overflow-hidden">
           <table className="table-base">
             <thead>
-              <tr><th>收款單號</th><th>請款單</th><th>業主</th><th>收款金額</th><th>付款方式</th><th>收款日期</th><th>交易編號</th></tr>
+              <tr><th>收款單號</th><th>請款單</th><th>業主</th><th>收款金額</th><th>付款方式</th><th>入帳帳號</th><th>備注</th><th>收款日期</th><th>操作</th></tr>
             </thead>
             <tbody>
               {receipts?.map(rec => (
@@ -493,11 +529,16 @@ export default function FinancePage() {
                   <td className="text-sm">{rec.owner_company || '--'}</td>
                   <td className="text-sm font-medium text-green-600">{formatMoney(rec.amount)}</td>
                   <td className="text-xs">{rec.payment_method}</td>
+                  <td className="text-xs text-gray-500 max-w-[120px]"><div className="truncate">{rec.bank_account || '--'}</div></td>
+                  <td className="text-xs text-gray-400 max-w-[100px]"><div className="truncate">{rec.notes || '--'}</div></td>
                   <td className="text-xs text-gray-400">{formatDate(rec.payment_date)}</td>
-                  <td className="text-xs text-gray-400 font-mono">{rec.reference_number || '--'}</td>
+                  <td>
+                    <a href={financeAPI.receiptPdf(rec.id)} target="_blank" rel="noopener noreferrer"
+                      className="btn btn-sm gap-1"><Download size={12} /> PDF</a>
+                  </td>
                 </tr>
               ))}
-              {!receipts?.length && <tr><td colSpan="7" className="py-12 text-center text-sm text-gray-400">尚無收款記錄</td></tr>}
+              {!receipts?.length && <tr><td colSpan="9" className="py-12 text-center text-sm text-gray-400">尚無收款記錄</td></tr>}
             </tbody>
           </table>
         </div>

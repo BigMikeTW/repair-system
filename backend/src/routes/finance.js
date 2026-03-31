@@ -778,6 +778,72 @@ router.post('/receipts', authenticate, authorize('admin','customer_service'), as
   res.status(201).json(result.rows[0]);
 }));
 
+
+// GET /api/finance/receipts/:id/pdf
+router.get('/receipts/:id/pdf', authenticate, asyncHandler(async (req, res) => {
+  const rec = await query(`
+    SELECT r.*, inv.invoice_number, inv.total_amount, inv.amount, inv.tax_amount,
+      c.case_number, c.owner_name, c.owner_company, c.owner_phone, c.location_address
+    FROM receipts r
+    LEFT JOIN invoices inv ON r.invoice_id = inv.id
+    LEFT JOIN cases c ON inv.case_id = c.id
+    WHERE r.id = $1
+  `, [req.params.id]);
+  if (!rec.rows.length) return res.status(404).json({ error: '收款單不存在' });
+  const receipt = rec.rows[0];
+
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 0, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${receipt.receipt_number}.pdf"`);
+    doc.pipe(res);
+
+    drawTechHeader(doc, '收 款 單', 'RECEIPT', receipt.receipt_number);
+    doc.y = 115;
+
+    drawSectionHeader(doc, '客戶資訊');
+    let infoY = doc.y;
+    drawInfoRow(doc, '業主 / 公司', receipt.owner_company || receipt.owner_name, 40, 40, infoY);
+    drawInfoRow(doc, '聯絡人', receipt.owner_name, 40, 40, infoY + 14);
+    drawInfoRow(doc, '電話', receipt.owner_phone, 40, 40, infoY + 28);
+    drawInfoRow(doc, '關聯案件', receipt.case_number, 280, 280, infoY);
+    drawInfoRow(doc, '關聯請款單', receipt.invoice_number, 280, 280, infoY + 14);
+    drawInfoRow(doc, '收款日期', receipt.payment_date ? new Date(receipt.payment_date).toLocaleDateString('zh-TW') : '--', 280, 280, infoY + 28);
+    doc.y = infoY + 52;
+
+    drawSectionHeader(doc, '收款資訊');
+    let payY = doc.y;
+    drawInfoRow(doc, '付款方式', receipt.payment_method, 40, 40, payY);
+    drawInfoRow(doc, '交易編號', receipt.reference_number || '--', 40, 40, payY + 14);
+    drawInfoRow(doc, '入帳帳號', receipt.bank_account || '--', 40, 40, payY + 28);
+    doc.y = payY + 50;
+
+    // Amount box
+    doc.y += 8;
+    doc.save();
+    doc.roundedRect(350, doc.y, 205, 32, 4).fill(TECH_COLORS.primary);
+    doc.fillColor(TECH_COLORS.white).fontSize(10).font('Helvetica').text('實收金額', 360, doc.y + 10);
+    doc.fontSize(14).font('Helvetica-Bold').text(`$${Number(receipt.amount).toLocaleString()}`, 360, doc.y + 10, { align: 'right', width: 185 });
+    doc.restore();
+    doc.y += 44;
+
+    if (receipt.notes) {
+      drawSectionHeader(doc, '備注事項');
+      doc.fillColor(TECH_COLORS.text).fontSize(9).font('Helvetica')
+         .text(receipt.notes, 48, doc.y + 4, { width: 507 });
+    }
+
+    doc.save();
+    doc.rect(0, 800, 595, 42).fill(TECH_COLORS.dark);
+    doc.fillColor(TECH_COLORS.gray).fontSize(8)
+       .text('此收款單由 Signify 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
+    doc.restore();
+
+    doc.end();
+    resolve();
+  });
+}));
+
 // Payment records
 router.get('/payments', authenticate, asyncHandler(async (req, res) => {
   const result = await query(`

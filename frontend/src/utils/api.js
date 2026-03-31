@@ -102,21 +102,22 @@ export const financeAPI = {
   getQuotation: (id) => api.get(`/finance/quotations/${id}`),
   createQuotation: (data) => api.post('/finance/quotations', data),
   updateQuotationStatus: (id, data) => api.put(`/finance/quotations/${id}/status`, data),
-  quotationPdf: (id) => `${BACKEND_URL}/api/finance/quotations/${id}/pdf`,
+  quotationPdf: (id) => `${BACKEND_URL}/api/finance/quotations/${id}/pdf?token=${localStorage.getItem('token')}`,
   getInvoices: (params) => api.get('/finance/invoices', { params }),
   createInvoice: (data) => api.post('/finance/invoices', data),
   recordPayment: (id, data) => api.put(`/finance/invoices/${id}/payment`, data),
-  invoicePdf: (id) => `${BACKEND_URL}/api/finance/invoices/${id}/pdf`,
+  invoicePdf: (id) => `${BACKEND_URL}/api/finance/invoices/${id}/pdf?token=${localStorage.getItem('token')}`,
   getStats: () => api.get('/finance/stats'),
   getPayments: () => api.get('/finance/payments'),
   // 結案單
   getClosures: (params) => api.get('/finance/closures', { params }),
   createClosure: (data) => api.post('/finance/closures', data),
-  closurePdf: (id) => `${BACKEND_URL}/api/finance/closures/${id}/pdf`,
-  closurePdfByCase: (caseId) => `${BACKEND_URL}/api/finance/closures/by-case/${caseId}/pdf`,
+  closurePdf: (id) => `${BACKEND_URL}/api/finance/closures/${id}/pdf?token=${localStorage.getItem('token')}`,
+  closurePdfByCase: (caseId) => `${BACKEND_URL}/api/finance/closures/by-case/${caseId}/pdf?token=${localStorage.getItem('token')}`,
   // 收款單
   getReceipts: () => api.get('/finance/receipts'),
   createReceipt: (data) => api.post('/finance/receipts', data),
+  receiptPdf: (id) => `${BACKEND_URL}/api/finance/receipts/${id}/pdf?token=${localStorage.getItem('token')}`,
 };
 
 // Users
