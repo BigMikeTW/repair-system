@@ -162,7 +162,7 @@ function ClosureForm({ onClose, onSuccess }) {
             <textarea {...register('notes')} className="form-textarea" rows={3} placeholder="其他備注、後續建議維護事項..." />
           </div>
           <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700">
-            建立結案單後，案件狀態將自動更新為「已結案」，可產出 Signify 品牌色調的結案報告 PDF。
+            建立結案單後，案件狀態將自動更新為「已結案」，可產出 皇祥工程設計 品牌色調的結案報告 PDF。
           </div>
           <div className="flex justify-end gap-3">
             <button type="button" className="btn" onClick={onClose}>取消</button>
@@ -413,7 +413,7 @@ export default function FinancePage() {
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 transition-colors ${tab === key ? 'border-primary text-primary font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <Icon size={14} />
             {label}
-            {count > 0 && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'}`}>{count}</span>}
+            {count > 0 && <span className={`text-xs px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500'}`}>{count}</span>}
           </button>
         ))}
       </div>

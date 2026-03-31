@@ -98,7 +98,7 @@ const handleTextMessage = async (event) => {
   // 預設回覆
   await replyMessage(replyToken, {
     type: 'flex',
-    altText: '您好！我是 Signify 智慧客服',
+    altText: '您好！我是 皇祥工程設計 智慧客服',
     contents: {
       type: 'bubble',
       body: {
@@ -106,7 +106,7 @@ const handleTextMessage = async (event) => {
         layout: 'vertical',
         spacing: 'md',
         contents: [
-          { type: 'text', text: '您好！我是 Signify 智慧客服 👋', weight: 'bold', size: 'md' },
+          { type: 'text', text: '您好！我是 皇祥工程設計 智慧客服 👋', weight: 'bold', size: 'md' },
           { type: 'text', text: '我可以協助您：', size: 'sm', color: '#888888', margin: 'md' },
           { type: 'text', text: '📋 輸入「報修」→ 申請報修', size: 'sm' },
           { type: 'text', text: '🔍 輸入案件編號 → 查詢進度', size: 'sm' },

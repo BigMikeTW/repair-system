@@ -35,7 +35,7 @@ function StatusTimeline({ currentStatus }) {
                 'bg-white border-gray-200 text-gray-300'}`}>
               {done ? '✓' : step.icon}
             </div>
-            <div className={`text-[10px] text-center leading-tight font-medium
+            <div className={`text-xs text-center leading-tight font-medium
               ${done || active ? 'text-[#FF6B00]' : 'text-gray-300'}`}>
               {step.label}
             </div>
@@ -69,7 +69,7 @@ export default function PublicTrackPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] to-[#0F3460]">
       {/* Header */}
       <div className="px-4 py-6 text-center">
-        <div className="text-[#FF6B00] text-sm font-bold tracking-widest mb-2">SIGNIFY</div>
+        <div className="text-[#FF6B00] text-sm font-bold tracking-widest mb-2">皇祥工程設計</div>
         <h1 className="text-white text-2xl font-bold">案件進度查詢</h1>
         <p className="text-gray-400 text-sm mt-1">輸入案件編號即可查詢即時進度</p>
       </div>
@@ -118,7 +118,7 @@ export default function PublicTrackPage() {
               {/* Card Header */}
               <div className="bg-[#1A1A2E] px-5 py-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[#FF6B00] text-xs font-bold">SIGNIFY</span>
+                  <span className="text-[#FF6B00] text-xs font-bold">皇祥工程設計</span>
                   <span className="text-gray-400 text-xs">
                     {new Date(caseData.created_at).toLocaleDateString('zh-TW')}
                   </span>

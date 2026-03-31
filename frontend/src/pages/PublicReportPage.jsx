@@ -70,7 +70,7 @@ export default function PublicReportPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] to-[#0F3460]">
       {/* Header */}
       <div className="px-4 py-6 text-center">
-        <div className="text-[#FF6B00] text-sm font-bold tracking-widest mb-2">SIGNIFY</div>
+        <div className="text-[#FF6B00] text-sm font-bold tracking-widest mb-2">皇祥工程設計</div>
         <h1 className="text-white text-2xl font-bold">線上報修申請</h1>
         <p className="text-gray-400 text-sm mt-1">填寫以下資料，我們將盡快安排服務</p>
       </div>

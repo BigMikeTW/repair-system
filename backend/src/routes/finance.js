@@ -39,7 +39,7 @@ const calcTotals = (items, taxRate) => {
 
 // ── 科技風 PDF Helper ──────────────────────────────────────────────────────────
 const TECH_COLORS = {
-  primary: '#FF6B00',       // Signify orange
+  primary: '#FF6B00',       // 皇祥工程設計 orange
   dark:    '#1A1A2E',       // deep navy
   accent:  '#16213E',       // dark blue
   mid:     '#0F3460',       // mid blue
@@ -204,7 +204,7 @@ const generateQuotationPdfBuffer = async (quotId) => {
     doc.save();
     doc.rect(0, 800, 595, 42).fill(TECH_COLORS.dark);
     doc.fillColor(TECH_COLORS.gray).fontSize(8)
-       .text('此報價單由 Signify 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
+       .text('此報價單由 皇祥工程設計 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
     doc.restore();
 
     doc.end();
@@ -298,14 +298,14 @@ const generateInvoicePdfBuffer = async (invId) => {
     doc.save();
     doc.rect(0, 800, 595, 42).fill(TECH_COLORS.dark);
     doc.fillColor(TECH_COLORS.gray).fontSize(8)
-       .text('此請款單由 Signify 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
+       .text('此請款單由 皇祥工程設計 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
     doc.restore();
 
     doc.end();
   });
 };
 
-// ── Signify 品牌色調 結案報告 PDF ──────────────────────────────────────────────
+// ── 皇祥工程設計 品牌色調 結案報告 PDF ──────────────────────────────────────────────
 const generateClosureReportPdf = async (caseId, closureData = {}) => {
   const caseResult = await query(`
     SELECT c.*, u.name as engineer_name, u.phone as engineer_phone,
@@ -333,7 +333,7 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    // ─ Signify-branded Header ─────────────────────────────────────
+    // ─ 皇祥工程設計-branded Header ─────────────────────────────────────
     // Background gradient simulation
     doc.save();
     doc.rect(0, 0, 595, 120).fill('#1A1A2E');
@@ -345,7 +345,7 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
 
     // Logo area & title
     doc.save();
-    doc.fillColor('#FF6B00').fontSize(9).font('Helvetica-Bold').text('SIGNIFY', 40, 20);
+    doc.fillColor('#FF6B00').fontSize(9).font('Helvetica-Bold').text('皇祥工程設計', 40, 20);
     doc.fillColor('#FFFFFF').fontSize(20).font('Helvetica-Bold').text('工程結案報告', 40, 35);
     doc.fillColor('#FF6B00').fontSize(10).font('Helvetica').text('ENGINEERING CLOSURE REPORT', 40, 62);
 
@@ -506,7 +506,7 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     doc.save();
     doc.rect(0, footerY, 595, 52).fill('#1A1A2E');
     doc.rect(0, footerY, 595, 3).fill('#FF6B00');
-    doc.fillColor('#FF6B00').fontSize(8).font('Helvetica-Bold').text('SIGNIFY', 40, footerY + 12);
+    doc.fillColor('#FF6B00').fontSize(8).font('Helvetica-Bold').text('皇祥工程設計', 40, footerY + 12);
     doc.fillColor('#95A5A6').fontSize(7.5).font('Helvetica')
        .text('維修工程管理系統  ·  本報告由系統自動產生，具備法律效力之簽收記錄', 85, footerY + 14);
     doc.fillColor('#4A4A6A').fontSize(7)
@@ -723,7 +723,7 @@ router.get('/closures/by-case/:caseId/pdf', authenticate, asyncHandler(async (re
   }
 }));
 
-// GET /api/finance/closures/:id/pdf  (Signify品牌色調 結案報告)
+// GET /api/finance/closures/:id/pdf  (皇祥工程設計品牌色調 結案報告)
 router.get('/closures/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   const cr = await query('SELECT * FROM closure_reports WHERE id=$1', [req.params.id]);
   if (!cr.rows.length) return res.status(404).json({ error: '結案單不存在' });
@@ -836,7 +836,7 @@ router.get('/receipts/:id/pdf', authenticate, asyncHandler(async (req, res) => {
     doc.save();
     doc.rect(0, 800, 595, 42).fill(TECH_COLORS.dark);
     doc.fillColor(TECH_COLORS.gray).fontSize(8)
-       .text('此收款單由 Signify 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
+       .text('此收款單由 皇祥工程設計 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
     doc.restore();
 
     doc.end();

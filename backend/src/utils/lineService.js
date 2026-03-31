@@ -101,7 +101,7 @@ const buildCaseStatusFlex = (c, title, subtitle) => ({
           contents: [
             {
               type: 'text',
-              text: 'SIGNIFY',
+              text: '皇祥工程設計',
               color: '#FF6B00',
               size: 'xs',
               weight: 'bold',
@@ -461,7 +461,7 @@ const buildReportFormFlex = () => ({
       backgroundColor: '#1A1A2E',
       paddingAll: '16px',
       contents: [
-        { type: 'text', text: 'SIGNIFY', color: '#FF6B00', size: 'xs', weight: 'bold' },
+        { type: 'text', text: '皇祥工程設計', color: '#FF6B00', size: 'xs', weight: 'bold' },
         { type: 'text', text: '線上報修申請', color: '#FFFFFF', size: 'xl', weight: 'bold', margin: 'sm' },
         { type: 'text', text: '請點擊下方按鈕填寫報修資料', color: '#AAAAAA', size: 'sm' },
       ],

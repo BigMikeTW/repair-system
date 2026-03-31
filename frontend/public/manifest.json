@@ -1,7 +1,7 @@
 {
-  "name": "Signify 工程報修管理系統",
+  "name": "皇祥工程設計 工程報修管理系統",
   "short_name": "工程報修",
-  "description": "Signify 工程報修管理系統",
+  "description": "皇祥工程設計 工程報修管理系統",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1A1A2E",
