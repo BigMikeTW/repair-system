@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm } from 'react-hook-form';
 import {
   ArrowLeft, Upload, Plus, Edit2, Trash2, FileText,
-  User, Shield, Calendar, Phone, Briefcase, AlertTriangle, Clock
+  User, Shield, Calendar, Phone, Briefcase, AlertTriangle, Clock,
+  MessageCircle, CheckCircle, XCircle, Copy, ExternalLink
 } from 'lucide-react';
 import api from '../utils/api';
 import { ROLE_LABELS, ROLE_BADGES, formatDate } from '../utils/helpers';
@@ -239,6 +240,112 @@ function InsuranceModal({ userId, record, onClose, onSuccess }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────
+
+// ── LINE 綁定管理（管理員用）────────────────────────────────
+function LineBindAdmin({ userId, userName }) {
+  const [bindCode, setBindCode] = React.useState(null);
+  const [bindExpiry, setBindExpiry] = React.useState(null);
+  const { data: bindStatus, refetch } = useQuery(
+    ['lineStatus', userId],
+    () => api.get(`/line/status/${userId}`).then(r => r.data),
+    { enabled: !!userId }
+  );
+
+  const generateCode = async () => {
+    try {
+      const res = await api.post('/line/bind', { user_id: userId });
+      setBindCode(res.data.token);
+      setBindExpiry(res.data.expires_at);
+      toast.success('綁定碼已產生');
+    } catch { toast.error('產生失敗'); }
+  };
+
+  const unbind = async () => {
+    if (!window.confirm(`確定解除 ${userName} 的 LINE 綁定？`)) return;
+    try {
+      await api.delete(`/line/unbind/${userId}`);
+      setBindCode(null);
+      refetch();
+      toast.success('已解除 LINE 綁定');
+    } catch { toast.error('解除失敗'); }
+  };
+
+  const copyCode = () => {
+    if (bindCode) {
+      navigator.clipboard.writeText(`綁定 ${bindCode}`);
+      toast.success('已複製！請告知用戶到 LINE OA 發送');
+    }
+  };
+
+  const isBound = bindStatus?.bound;
+
+  return (
+    <div className="card card-body mt-5">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: '#06C755' }}>
+          <MessageCircle size={18} className="text-white" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900">LINE 通知綁定</h3>
+          <p className="text-xs text-gray-400">管理員可代為產生綁定碼，由用戶在 LINE OA 輸入完成綁定</p>
+        </div>
+        <div>
+          {isBound
+            ? <span className="badge badge-success flex items-center gap-1"><CheckCircle size={11} /> 已綁定</span>
+            : <span className="badge badge-gray flex items-center gap-1"><XCircle size={11} /> 未綁定</span>}
+        </div>
+      </div>
+
+      {isBound ? (
+        <div className="flex items-center justify-between bg-green-50 rounded-xl p-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle size={16} className="text-green-500" />
+            <span className="text-sm text-green-800">{userName} 的 LINE 帳號已綁定，可接收推播通知</span>
+          </div>
+          <button onClick={unbind} className="btn btn-sm text-danger border-red-200 hover:bg-red-50 text-xs">
+            解除綁定
+          </button>
+        </div>
+      ) : (
+        <div>
+          {!bindCode ? (
+            <div className="flex items-center gap-3">
+              <button onClick={generateCode} className="btn btn-sm gap-1"
+                style={{ background: '#06C755', borderColor: '#06C755', color: 'white' }}>
+                <MessageCircle size={12} /> 產生綁定碼
+              </button>
+              <span className="text-xs text-gray-400">產生後提供給 {userName}，讓他在 LINE OA 輸入完成綁定</span>
+            </div>
+          ) : (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <div className="text-xs text-green-700 font-medium mb-2">
+                ✅ 綁定碼已產生（有效至 {bindExpiry ? new Date(bindExpiry).toLocaleTimeString('zh-TW') : '--'}）
+              </div>
+              <div className="text-xs text-green-600 mb-3">
+                請告知 {userName} 在 LINE OA 輸入以下訊息：
+              </div>
+              <div className="bg-white rounded-lg px-4 py-3 border border-green-200 flex items-center justify-between mb-3">
+                <span className="font-mono text-lg font-bold text-gray-900 tracking-widest">
+                  綁定 {bindCode}
+                </span>
+                <button onClick={copyCode} className="btn btn-sm gap-1">
+                  <Copy size={12} /> 複製
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={generateCode} className="btn btn-sm">重新產生</button>
+                <button onClick={() => { setBindCode(null); refetch(); }} className="btn btn-sm">
+                  重新檢查狀態
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function UserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -562,6 +669,9 @@ export default function UserDetailPage() {
           )}
         </div>
       )}
+
+      {/* LINE 綁定管理 */}
+      <LineBindAdmin userId={id} userName={hrData?.user?.name || ''} />
 
       {/* Modals */}
       {licenseModal && (
