@@ -504,7 +504,7 @@ export default function UserDetailPage() {
                   currentUrl={data.id_card_url}
                   fileName="查看身分證影本"
                 />
-                <p className="text-[10px] text-gray-400 mt-1">支援 JPG、PNG、PDF，最大 10MB</p>
+                <p className="text-xs text-gray-400 mt-1">支援 JPG、PNG、PDF，最大 10MB</p>
               </div>
             </div>
 

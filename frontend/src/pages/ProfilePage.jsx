@@ -104,7 +104,7 @@ function LineBind({ user }) {
                     '收到綁定成功確認訊息即完成',
                   ].map((step, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs text-gray-600">
-                      <span className="w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">
+                      <span className="w-4 h-4 rounded-full bg-primary text-white flex items-center justify-center text-xs flex-shrink-0 mt-0.5">
                         {i + 1}
                       </span>
                       {step}

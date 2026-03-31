@@ -101,7 +101,7 @@ export default function BackupPage() {
                     <span className={`badge ${log.status === 'success' ? 'badge-success' : 'badge-danger'}`}>
                       {log.status === 'success' ? '成功' : '失敗'}
                     </span>
-                    {log.error_message && <div className="text-[10px] text-danger mt-0.5">{log.error_message}</div>}
+                    {log.error_message && <div className="text-xs text-danger mt-0.5">{log.error_message}</div>}
                   </td>
                   <td>
                     {log.status === 'success' && log.file_name && (

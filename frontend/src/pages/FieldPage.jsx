@@ -210,7 +210,7 @@ function NotesList({ caseId, isClosed }) {
                     </a>
                     {p.drive_link && (
                       <a href={p.drive_link} target="_blank" rel="noopener noreferrer"
-                        className="absolute bottom-0.5 right-0.5 bg-white/90 rounded px-1 py-0.5 text-[9px] text-primary">
+                        className="absolute bottom-0.5 right-0.5 bg-white/90 rounded px-1 py-0.5 text-xs text-primary">
                         Drive
                       </a>
                     )}

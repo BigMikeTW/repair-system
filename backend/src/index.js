@@ -46,6 +46,7 @@ app.use('/api/case-types', require('./routes/caseTypes'));
 app.use('/api/hr',         require('./routes/hr'));
 app.use('/api/case-notes', require('./routes/caseNotes'));
 app.use('/api/line',       require('./routes/line'));
+app.use('/api/system',     require('./routes/system'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 

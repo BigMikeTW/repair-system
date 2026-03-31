@@ -8,10 +8,13 @@ const { uploadSignature, uploadPdf, createCaseFolderStructure, isDropboxEnabled 
 const { notifyOwner, notifyEngineer } = require('../utils/lineService');
 
 const generateCaseNumber = async () => {
-  const year = new Date().getFullYear();
-  const result = await query(`SELECT COUNT(*) FROM cases WHERE created_at >= date_trunc('year', NOW())`);
-  const count = parseInt(result.rows[0].count) + 1;
-  return `WO-${year}-${String(count).padStart(4, '0')}`;
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const result = await query(`SELECT COUNT(*) FROM cases WHERE DATE(created_at) = CURRENT_DATE`);
+  const seq = String(parseInt(result.rows[0].count) + 1).padStart(3, '0');
+  return `WOR${y}${m}${d}${seq}`;
 };
 
 const addActivity = async (caseId, actorId, actorName, action, description, metadata = null) => {

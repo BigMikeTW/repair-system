@@ -4,7 +4,7 @@ import { useQuery } from 'react-query';
 import {
   LayoutDashboard, ClipboardList, Users, Wrench, MessageSquare,
   FileText, Shield, Database, LogOut, Bell, ChevronLeft,
-  Settings, Menu, Hammer, Tag
+  Settings, Menu, Hammer, Tag, RefreshCw
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { usersAPI } from '../utils/api';
@@ -23,7 +23,7 @@ const navConfig = [
     ]
   },
   {
-    section: '溝通管理',
+    section: '客服',
     items: [
       { to: '/chat', icon: MessageSquare, label: '線上客服', roles: ['admin','customer_service','engineer','owner'] },
     ]
@@ -42,6 +42,7 @@ const navConfig = [
       { to: '/permissions', icon: Shield, label: '權限設定', roles: ['admin'] },
       { to: '/case-types', icon: Tag, label: '報修類型', roles: ['admin','customer_service'] },
       { to: '/backup', icon: Database, label: '備份記錄', roles: ['admin'] },
+      { to: '/init', icon: RefreshCw, label: '初始設定', roles: ['admin'] },
     ]
   }
 ];
@@ -106,7 +107,7 @@ export default function Layout() {
         {visibleNav.map(section => (
           <div key={section.section} className="mb-3">
             {!collapsed && (
-              <div className="px-4 py-1 text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+              <div className="px-4 py-1 text-xs font-medium text-gray-400 uppercase tracking-wider">
                 {section.section}
               </div>
             )}
@@ -136,7 +137,7 @@ export default function Layout() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-medium text-gray-900 truncate">{user?.name}</div>
-              <div className="text-[10px] text-gray-400">{ROLE_LABELS[user?.role]}</div>
+              <div className="text-xs text-gray-400">{ROLE_LABELS[user?.role]}</div>
             </div>
             <NavLink to="/profile" className="p-1 hover:bg-gray-100 rounded">
               <Settings size={14} className="text-gray-400" />
@@ -190,14 +191,14 @@ export default function Layout() {
               <button className="p-1.5 hover:bg-gray-100 rounded relative">
                 <Bell size={17} className="text-gray-500" />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 text-[9px] bg-danger text-white rounded-full flex items-center justify-center px-0.5">
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 text-xs bg-danger text-white rounded-full flex items-center justify-center px-0.5">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
             </div>
             <NavLink to="/profile" className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-gray-100 rounded-lg">
-              <div className="w-6 h-6 rounded-full bg-primary-light flex items-center justify-center text-[10px] font-medium text-primary-dark">
+              <div className="w-6 h-6 rounded-full bg-primary-light flex items-center justify-center text-xs font-medium text-primary-dark">
                 {user?.name?.slice(0, 2)}
               </div>
               <span className="text-xs text-gray-700 hidden sm:block">{user?.name}</span>

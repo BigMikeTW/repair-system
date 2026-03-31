@@ -7,29 +7,23 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const pdf = require('../utils/pdfGenerator');
 
-const generateQuoteNumber = async () => {
-  const year = new Date().getFullYear();
-  const result = await query(`SELECT COUNT(*) FROM quotations WHERE created_at >= date_trunc('year', NOW())`);
-  return `QT-${year}-${String(parseInt(result.rows[0].count) + 1).padStart(4,'0')}`;
+// ── 新編碼格式：前綴3碼 + 年4碼 + 月2碼 + 日2碼 + 當日序號3碼 ──
+const genNumber = async (prefix, table, dateCol = 'created_at') => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const result = await query(
+    `SELECT COUNT(*) FROM ${table} WHERE DATE(${dateCol}) = CURRENT_DATE`
+  );
+  const seq = String(parseInt(result.rows[0].count) + 1).padStart(3, '0');
+  return `${prefix}${y}${m}${d}${seq}`;
 };
 
-const generateInvoiceNumber = async () => {
-  const year = new Date().getFullYear();
-  const result = await query(`SELECT COUNT(*) FROM invoices WHERE created_at >= date_trunc('year', NOW())`);
-  return `INV-${year}-${String(parseInt(result.rows[0].count) + 1).padStart(4,'0')}`;
-};
-
-const generateClosureNumber = async () => {
-  const year = new Date().getFullYear();
-  const result = await query(`SELECT COUNT(*) FROM closure_reports WHERE EXTRACT(YEAR FROM created_at)=$1`, [year]);
-  return `CR-${year}-${String(parseInt(result.rows[0].count) + 1).padStart(4,'0')}`;
-};
-
-const generateReceiptNumber = async () => {
-  const year = new Date().getFullYear();
-  const result = await query(`SELECT COUNT(*) FROM receipts WHERE EXTRACT(YEAR FROM created_at)=$1`, [year]);
-  return `REC-${year}-${String(parseInt(result.rows[0].count) + 1).padStart(4,'0')}`;
-};
+const generateQuoteNumber    = () => genNumber('QUO', 'quotations');
+const generateInvoiceNumber  = () => genNumber('INV', 'invoices');
+const generateClosureNumber  = () => genNumber('CLO', 'closure_reports');
+const generateReceiptNumber  = () => genNumber('REC', 'receipts');
 
 const calcTotals = (items, taxRate) => {
   const subtotal = items.reduce((sum, item) => sum + parseFloat(item.unit_price) * parseFloat(item.quantity), 0);
@@ -581,7 +575,42 @@ router.post('/quotations', authenticate, authorize('admin','customer_service','e
 router.put('/quotations/:id/status', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
   const { status } = req.body;
   const result = await query(`UPDATE quotations SET status=$1 WHERE id=$2 RETURNING *`, [status, req.params.id]);
+  // 同步更新關聯請款單的報價狀態
+  await query(`UPDATE invoices SET quotation_status=$1 WHERE quotation_id=$2`, [status, req.params.id]);
   res.json(result.rows[0]);
+}));
+
+// PUT /api/finance/quotations/:id
+router.put('/quotations/:id', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  const { valid_until, notes, items } = req.body;
+  const result = await query(
+    `UPDATE quotations SET valid_until=$1, notes=$2, updated_at=NOW() WHERE id=$3 RETURNING *`,
+    [valid_until||null, notes||null, req.params.id]
+  );
+  if (items) {
+    await query(`DELETE FROM quotation_items WHERE quotation_id=$1`, [req.params.id]);
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const st = (parseFloat(item.unit_price)*parseFloat(item.quantity)).toFixed(2);
+      await query(
+        `INSERT INTO quotation_items (quotation_id,item_name,description,quantity,unit,unit_price,subtotal,sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [req.params.id, item.item_name, item.description||'', item.quantity, item.unit||'', item.unit_price, st, i]
+      );
+    }
+    const items_r = await query(`SELECT * FROM quotation_items WHERE quotation_id=$1 ORDER BY sort_order`, [req.params.id]);
+    const sub = items_r.rows.reduce((s,i)=>s+parseFloat(i.subtotal),0);
+    const taxRate = parseFloat(result.rows[0].tax_rate)||5;
+    const tax = sub*(taxRate/100);
+    await query(`UPDATE quotations SET subtotal=$1,tax_amount=$2,total=$3 WHERE id=$4`, [sub.toFixed(2),(tax).toFixed(2),(sub+tax).toFixed(2),req.params.id]);
+  }
+  res.json(result.rows[0]);
+}));
+
+// DELETE /api/finance/quotations/:id
+router.delete('/quotations/:id', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  await query(`DELETE FROM quotation_items WHERE quotation_id=$1`, [req.params.id]);
+  await query(`DELETE FROM quotations WHERE id=$1`, [req.params.id]);
+  res.json({ success: true });
 }));
 
 // GET /api/finance/quotations/:id/pdf
@@ -723,18 +752,32 @@ router.post('/invoices', authenticate, authorize('admin','customer_service'), as
 // PUT /api/finance/invoices/:id/payment - record payment
 router.put('/invoices/:id/payment', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
   const { amount, payment_date, payment_method, reference_number, notes } = req.body;
-
   await query(`
     INSERT INTO payment_records (invoice_id, amount, payment_date, payment_method, reference_number, notes, recorded_by)
     VALUES ($1,$2,$3,$4,$5,$6,$7)
   `, [req.params.id, amount, payment_date, payment_method, reference_number, notes, req.user.id]);
-
   const result = await query(`
     UPDATE invoices SET status='paid', paid_at=NOW(), payment_method=$1, payment_reference=$2
     WHERE id=$3 RETURNING *
   `, [payment_method, reference_number, req.params.id]);
-
   res.json(result.rows[0]);
+}));
+
+// PUT /api/finance/invoices/:id
+router.put('/invoices/:id', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  const { amount, tax_amount, notes, due_date, quotation_id } = req.body;
+  const total = (parseFloat(amount||0)+parseFloat(tax_amount||0)).toFixed(2);
+  const result = await query(
+    `UPDATE invoices SET amount=$1,tax_amount=$2,total_amount=$3,notes=$4,due_date=$5,quotation_id=$6 WHERE id=$7 RETURNING *`,
+    [amount, tax_amount||0, total, notes||null, due_date||null, quotation_id||null, req.params.id]
+  );
+  res.json(result.rows[0]);
+}));
+
+// DELETE /api/finance/invoices/:id
+router.delete('/invoices/:id', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  await query(`DELETE FROM invoices WHERE id=$1`, [req.params.id]);
+  res.json({ success: true });
 }));
 
 // GET /api/finance/stats
@@ -877,6 +920,31 @@ router.post('/closures', authenticate, authorize('admin','customer_service'), as
   res.status(201).json(result.rows[0]);
 }));
 
+// PUT /api/finance/closures/:id
+router.put('/closures/:id', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  const cr = await query('SELECT * FROM closure_reports WHERE id=$1', [req.params.id]);
+  if (cr.rows[0]?.is_cancelled) return res.status(403).json({ error: '結案單已取消，無法修改' });
+  const { notes, summary } = req.body;
+  const result = await query(`UPDATE closure_reports SET notes=$1,summary=$2 WHERE id=$3 RETURNING *`, [notes, summary, req.params.id]);
+  res.json(result.rows[0]);
+}));
+
+// PUT /api/finance/closures/:id/cancel
+router.put('/closures/:id/cancel', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  const { cancel_reason } = req.body;
+  if (!cancel_reason?.trim()) return res.status(400).json({ error: '取消原因為必填' });
+  const userRes = await query('SELECT name FROM users WHERE id=$1', [req.user.id]);
+  const result = await query(`
+    UPDATE closure_reports
+    SET is_cancelled=true, cancel_reason=$1, cancelled_at=NOW(), cancelled_by=$2, cancelled_by_name=$3
+    WHERE id=$4 RETURNING *
+  `, [cancel_reason, req.user.id, userRes.rows[0]?.name||'—', req.params.id]);
+  if (!result.rows.length) return res.status(404).json({ error: '結案單不存在' });
+  // 同步更新案件狀態回「已完成」
+  await query(`UPDATE cases SET status='completed' WHERE id=$1`, [result.rows[0].case_id]);
+  res.json(result.rows[0]);
+}));
+
 // GET /api/finance/closures/by-case/:caseId/pdf  (必須在 /:id 之前)
 router.get('/closures/by-case/:caseId/pdf', authenticate, asyncHandler(async (req, res) => {
   try {
@@ -1010,6 +1078,22 @@ router.post('/receipts', authenticate, authorize('admin','customer_service'), as
   res.status(201).json(result.rows[0]);
 }));
 
+
+// PUT /api/finance/receipts/:id
+router.put('/receipts/:id', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  const { amount, payment_method, reference_number, bank_account, notes, payment_date } = req.body;
+  const result = await query(
+    `UPDATE receipts SET amount=$1,payment_method=$2,reference_number=$3,bank_account=$4,notes=$5,payment_date=$6 WHERE id=$7 RETURNING *`,
+    [amount, payment_method||'銀行轉帳', reference_number||null, bank_account||null, notes||null, payment_date||null, req.params.id]
+  );
+  res.json(result.rows[0]);
+}));
+
+// DELETE /api/finance/receipts/:id
+router.delete('/receipts/:id', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
+  await query(`DELETE FROM receipts WHERE id=$1`, [req.params.id]);
+  res.json({ success: true });
+}));
 
 // GET /api/finance/receipts/:id/pdf
 router.get('/receipts/:id/pdf', authenticate, asyncHandler(async (req, res) => {

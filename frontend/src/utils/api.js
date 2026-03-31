@@ -49,6 +49,10 @@ export const authAPI = {
 
 // Cases
 export const casesAPI = {
+  // Notes
+  getNotes: (caseId) => api.get(`/case-notes/${caseId}`),
+  addNote: (caseId, data) => api.post(`/case-notes/${caseId}`, data),
+  deleteNote: (caseId, noteId) => api.delete(`/case-notes/${caseId}/${noteId}`),
   list: (params) => api.get('/cases', { params }),
   get: (id) => api.get(`/cases/${id}`),
   create: (data) => api.post('/cases', data),
@@ -98,13 +102,19 @@ export const chatAPI = {
 
 // Finance
 export const financeAPI = {
+  // ── 報價單 ──────────────────────────────────────────────────
   getQuotations: (params) => api.get('/finance/quotations', { params }),
   getQuotation: (id) => api.get(`/finance/quotations/${id}`),
   createQuotation: (data) => api.post('/finance/quotations', data),
+  updateQuotation: (id, data) => api.put(`/finance/quotations/${id}`, data),
+  deleteQuotation: (id) => api.delete(`/finance/quotations/${id}`),
   updateQuotationStatus: (id, data) => api.put(`/finance/quotations/${id}/status`, data),
   quotationPdf: (id) => `${BACKEND_URL}/api/finance/quotations/${id}/pdf?token=${localStorage.getItem('token')}`,
+  // ── 請款單 ──────────────────────────────────────────────────
   getInvoices: (params) => api.get('/finance/invoices', { params }),
   createInvoice: (data) => api.post('/finance/invoices', data),
+  updateInvoice: (id, data) => api.put(`/finance/invoices/${id}`, data),
+  deleteInvoice: (id) => api.delete(`/finance/invoices/${id}`),
   recordPayment: (id, data) => api.put(`/finance/invoices/${id}/payment`, data),
   invoicePdf: (id) => `${BACKEND_URL}/api/finance/invoices/${id}/pdf?token=${localStorage.getItem('token')}`,
   getStats: () => api.get('/finance/stats'),
@@ -112,6 +122,8 @@ export const financeAPI = {
   // 結案單
   getClosures: (params) => api.get('/finance/closures', { params }),
   createClosure: (data) => api.post('/finance/closures', data),
+  updateClosure: (id, data) => api.put(`/finance/closures/${id}`, data),
+  cancelClosure: (id, data) => api.put(`/finance/closures/${id}/cancel`, data),
   closurePdf: (id) => `${BACKEND_URL}/api/finance/closures/${id}/pdf?token=${localStorage.getItem('token')}`,
   closurePdfByCase: (caseId) => `${BACKEND_URL}/api/finance/closures/by-case/${caseId}/pdf?token=${localStorage.getItem('token')}`,
   // 收款單

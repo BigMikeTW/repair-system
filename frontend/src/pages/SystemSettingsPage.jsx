@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Plus, Trash2, Save, CreditCard, Users, Info, Edit2, X, Check } from 'lucide-react';
+import { Plus, Trash2, Save, CreditCard, Users, Info, Edit2, X, Check, FileText, Building2, StickyNote, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 // ── 儲存/讀取工具 ─────────────────────────────────────────────
@@ -490,13 +490,264 @@ function RoleSettings() {
   );
 }
 
+// ── PDF 模組選項 ─────────────────────────────────────────────
+const PDF_MODULES = [
+  { key: 'quotation', label: '報價單' },
+  { key: 'invoice',   label: '請款單' },
+  { key: 'receipt',   label: '收款單' },
+  { key: 'closure',   label: '結案報告' },
+];
+
+// ── 自定備注設定 ─────────────────────────────────────────────
+function RemarksSettings() {
+  const getRemarks = () => { try { return JSON.parse(localStorage.getItem('custom_remarks') || '[]'); } catch { return []; } };
+  const saveRemarks = (v) => localStorage.setItem('custom_remarks', JSON.stringify(v));
+
+  const [remarks, setRemarks] = useState(getRemarks);
+  const [form, setForm] = useState(null); // null=closed, {}=new, {..data}=edit
+  const [name, setName] = useState('');
+  const [content, setContent] = useState('');
+  const [modules, setModules] = useState([]);
+
+  const openNew = () => { setForm({}); setName(''); setContent(''); setModules([]); };
+  const openEdit = (r, idx) => { setForm({ idx }); setName(r.name); setContent(r.content||''); setModules(r.modules||[]); };
+
+  const save = () => {
+    if (!name.trim()) return toast.error('請輸入備注名稱');
+    const newRemark = { id: form.idx !== undefined ? remarks[form.idx].id : Date.now(), name: name.trim(), content: content.trim(), modules };
+    let updated;
+    if (form.idx !== undefined) {
+      updated = remarks.map((r, i) => i === form.idx ? newRemark : r);
+    } else {
+      updated = [...remarks, newRemark];
+    }
+    saveRemarks(updated);
+    setRemarks(updated);
+    setForm(null);
+    toast.success(form.idx !== undefined ? '備注已更新' : '備注已新增');
+  };
+
+  const remove = (idx) => {
+    if (!window.confirm('確定刪除此備注？')) return;
+    const updated = remarks.filter((_, i) => i !== idx);
+    saveRemarks(updated);
+    setRemarks(updated);
+    toast.success('已刪除');
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="font-semibold text-gray-900">自定備注</h3>
+          <p className="text-sm text-gray-400 mt-0.5">設定 PDF 文件備注，可選擇適用的文件類型</p>
+        </div>
+        <button className="btn btn-sm btn-primary gap-1" onClick={openNew}><Plus size={13} /> 新增備注</button>
+      </div>
+
+      {remarks.length === 0 && (
+        <div className="text-center py-10 text-gray-400 text-sm">尚無自定備注</div>
+      )}
+      <div className="space-y-2">
+        {remarks.map((r, idx) => (
+          <div key={r.id} className="flex items-start justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+            <div className="flex-1">
+              <div className="font-medium text-gray-900">{r.name}</div>
+              {r.content && <div className="text-sm text-gray-500 mt-1">{r.content}</div>}
+              <div className="flex gap-1.5 mt-2 flex-wrap">
+                {r.modules?.map(m => {
+                  const mod = PDF_MODULES.find(p => p.key === m);
+                  return <span key={m} className="badge badge-primary text-xs">{mod?.label||m}</span>;
+                })}
+                {(!r.modules || r.modules.length === 0) && <span className="text-xs text-gray-400">未設定適用模組</span>}
+              </div>
+            </div>
+            <div className="flex gap-1 ml-3">
+              <button className="btn btn-sm" onClick={() => openEdit(r, idx)}><Edit2 size={12} /></button>
+              <button className="btn btn-sm text-danger border-red-200" onClick={() => remove(idx)}><Trash2 size={12} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {form && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold">{form.idx !== undefined ? '修改備注' : '新增備注'}</h3>
+              <button className="btn btn-sm" onClick={() => setForm(null)}><X size={14} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="form-label">備注名稱 *</label>
+                <input value={name} onChange={e => setName(e.target.value)} className="form-control" placeholder="例：施工保固聲明" />
+              </div>
+              <div>
+                <label className="form-label">備注內容</label>
+                <textarea value={content} onChange={e => setContent(e.target.value)} className="form-textarea" rows={4} placeholder="備注文字內容..." />
+              </div>
+              <div>
+                <label className="form-label">適用文件類型</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PDF_MODULES.map(mod => (
+                    <label key={mod.key} className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${modules.includes(mod.key) ? 'border-primary bg-primary-light' : 'border-gray-200'}`}>
+                      <input type="checkbox" checked={modules.includes(mod.key)}
+                        onChange={() => setModules(prev => prev.includes(mod.key) ? prev.filter(k => k !== mod.key) : [...prev, mod.key])}
+                        className="w-4 h-4 rounded" />
+                      <span className="text-sm font-medium">{mod.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-3">
+              <button className="btn" onClick={() => setForm(null)}>取消</button>
+              <button className="btn btn-primary" onClick={save}>儲存</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── 報表台頭設定 ─────────────────────────────────────────────
+function CompanyHeaderSettings() {
+  const getHeaders = () => { try { return JSON.parse(localStorage.getItem('company_headers') || '[]'); } catch { return []; } };
+  const saveHeaders = (v) => localStorage.setItem('company_headers', JSON.stringify(v));
+
+  const [headers, setHeaders] = useState(getHeaders);
+  const [form, setForm] = useState(null);
+  const [fd, setFd] = useState({});
+
+  const openNew = () => { setForm({}); setFd({}); };
+  const openEdit = (h, idx) => { setForm({ idx }); setFd({ ...h }); };
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setFd(prev => ({ ...prev, logo: ev.target.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const save = () => {
+    if (!fd.name_zh?.trim()) return toast.error('請輸入公司中文全名');
+    const header = { id: form.idx !== undefined ? headers[form.idx].id : Date.now(), ...fd };
+    let updated;
+    if (form.idx !== undefined) {
+      updated = headers.map((h, i) => i === form.idx ? header : h);
+    } else {
+      updated = [...headers, header];
+    }
+    saveHeaders(updated);
+    setHeaders(updated);
+    setForm(null);
+    toast.success(form.idx !== undefined ? '台頭已更新' : '台頭已新增');
+  };
+
+  const remove = (idx) => {
+    if (!window.confirm('確定刪除此台頭設定？')) return;
+    const updated = headers.filter((_, i) => i !== idx);
+    saveHeaders(updated);
+    setHeaders(updated);
+    toast.success('已刪除');
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="font-semibold text-gray-900">報表台頭設定</h3>
+          <p className="text-sm text-gray-400 mt-0.5">設定 PDF 文件左上角的公司資訊</p>
+        </div>
+        <button className="btn btn-sm btn-primary gap-1" onClick={openNew}><Plus size={13} /> 新增台頭</button>
+      </div>
+
+      {headers.length === 0 && (
+        <div className="text-center py-10 text-gray-400 text-sm">尚無台頭設定，下載 PDF 時將使用預設值「皇祥工程設計」</div>
+      )}
+      <div className="space-y-2">
+        {headers.map((h, idx) => (
+          <div key={h.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+            <div className="flex items-center gap-4">
+              {h.logo && <img src={h.logo} alt="logo" className="w-10 h-10 object-contain rounded" />}
+              <div>
+                <div className="font-semibold">{h.name_zh}</div>
+                {h.name_en && <div className="text-sm text-gray-400">{h.name_en}</div>}
+                {h.abbr_zh && <div className="text-xs text-gray-400">縮寫：{h.abbr_zh}{h.abbr_en ? ` / ${h.abbr_en}` : ''}</div>}
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <button className="btn btn-sm" onClick={() => openEdit(h, idx)}><Edit2 size={12} /></button>
+              <button className="btn btn-sm text-danger border-red-200" onClick={() => remove(idx)}><Trash2 size={12} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {form && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-semibold">{form.idx !== undefined ? '修改台頭' : '新增台頭'}</h3>
+              <button className="btn btn-sm" onClick={() => setForm(null)}><X size={14} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="form-label">公司中文全名 *</label>
+                  <input value={fd.name_zh||''} onChange={e => setFd(p=>({...p,name_zh:e.target.value}))} className="form-control" placeholder="例：皇祥工程設計有限公司" />
+                </div>
+                <div className="col-span-2">
+                  <label className="form-label">公司英文全名</label>
+                  <input value={fd.name_en||''} onChange={e => setFd(p=>({...p,name_en:e.target.value}))} className="form-control" placeholder="例：HuangXiang Engineering Design Co., Ltd." />
+                </div>
+                <div>
+                  <label className="form-label">中文縮寫</label>
+                  <input value={fd.abbr_zh||''} onChange={e => setFd(p=>({...p,abbr_zh:e.target.value}))} className="form-control" placeholder="皇祥工程" />
+                </div>
+                <div>
+                  <label className="form-label">英文縮寫</label>
+                  <input value={fd.abbr_en||''} onChange={e => setFd(p=>({...p,abbr_en:e.target.value}))} className="form-control" placeholder="HX Engineering" />
+                </div>
+              </div>
+              <div>
+                <label className="form-label">公司 Slogan</label>
+                <input value={fd.slogan||''} onChange={e => setFd(p=>({...p,slogan:e.target.value}))} className="form-control" placeholder="選填" />
+              </div>
+              <div>
+                <label className="form-label">公司 LOGO</label>
+                <div className="flex items-center gap-3">
+                  {fd.logo && <img src={fd.logo} alt="logo" className="w-16 h-16 object-contain rounded border border-gray-200" />}
+                  <label className="btn btn-sm gap-1 cursor-pointer">
+                    <Upload size={12} /> 上傳 LOGO
+                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                  </label>
+                  {fd.logo && <button className="btn btn-sm text-danger border-red-200" onClick={() => setFd(p=>({...p,logo:null}))}>移除</button>}
+                </div>
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-3">
+              <button className="btn" onClick={() => setForm(null)}>取消</button>
+              <button className="btn btn-primary" onClick={save}>儲存</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── 主頁面 ────────────────────────────────────────────────────
 export default function SystemSettingsPage() {
   const [tab, setTab] = useState('finance');
 
   const TABS = [
-    { key: 'finance', label: '財務管理', icon: CreditCard },
-    { key: 'roles',   label: '角色管理', icon: Users },
+    { key: 'finance', label: '財務管理',   icon: CreditCard },
+    { key: 'roles',   label: '角色管理',   icon: Users },
+    { key: 'remarks', label: '自定備注',   icon: StickyNote },
+    { key: 'headers', label: '報表台頭',   icon: Building2 },
   ];
 
   return (
@@ -504,30 +755,25 @@ export default function SystemSettingsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">功能設定</h1>
-          <p className="text-sm text-gray-500 mt-0.5">系統功能參數設定、角色管理與模組權限</p>
+          <p className="text-sm text-gray-500 mt-0.5">系統功能參數設定、角色管理、備注與報表台頭</p>
         </div>
       </div>
 
       <div className="flex gap-0 mb-5 border-b border-gray-100">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${tab === key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            className={`flex items-center gap-2 px-5 py-3 text-base font-medium border-b-2 transition-colors ${tab === key ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <Icon size={15} /> {label}
           </button>
         ))}
       </div>
 
-      {tab === 'finance' && (
-        <div className="card card-body">
-          <BankAccountSettings />
-        </div>
-      )}
-
-      {tab === 'roles' && (
-        <div className="card card-body">
-          <RoleSettings />
-        </div>
-      )}
+      {tab === 'finance'  && <div className="card card-body"><BankAccountSettings /></div>}
+      {tab === 'roles'    && <div className="card card-body"><RoleSettings /></div>}
+      {tab === 'remarks'  && <div className="card card-body"><RemarksSettings /></div>}
+      {tab === 'headers'  && <div className="card card-body"><CompanyHeaderSettings /></div>}
     </div>
   );
 }
+
+export { storage };

@@ -95,13 +95,13 @@ export default function ChatPage() {
               <div className="flex items-center justify-between mb-0.5">
                 <span className="text-xs font-medium text-gray-800 truncate">{conv.owner_company || conv.owner_name || conv.title}</span>
                 {parseInt(conv.unread_count) > 0 && (
-                  <span className="w-4 h-4 text-[9px] bg-danger text-white rounded-full flex items-center justify-center flex-shrink-0 ml-1">
+                  <span className="w-4 h-4 text-xs bg-danger text-white rounded-full flex items-center justify-center flex-shrink-0 ml-1">
                     {conv.unread_count}
                   </span>
                 )}
               </div>
-              <div className="text-[10px] text-gray-400 truncate">{conv.last_message || '暫無訊息'}</div>
-              <div className="text-[10px] text-primary mt-0.5">{conv.case_number}</div>
+              <div className="text-xs text-gray-400 truncate">{conv.last_message || '暫無訊息'}</div>
+              <div className="text-xs text-primary mt-0.5">{conv.case_number}</div>
             </button>
           ))}
           {!conversations?.length && (
@@ -131,7 +131,7 @@ export default function ChatPage() {
                 return (
                   <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[70%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
-                      <div className="text-[10px] text-gray-400 mb-1 px-1">
+                      <div className="text-xs text-gray-400 mb-1 px-1">
                         {!isMe && <span>{msg.sender_name} · {ROLE_LABELS[msg.sender_role] || msg.sender_role} · </span>}
                         {formatDateTime(msg.created_at)}
                       </div>

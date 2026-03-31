@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
-import { MapPin, Clock, User, Phone, Building, ArrowLeft, MessageSquare, FileText, Activity, CheckCircle, Circle, AlertCircle } from 'lucide-react';
+import { MapPin, Clock, User, Phone, Building, ArrowLeft, MessageSquare, FileText, Activity, CheckCircle, Circle, AlertCircle, Lock, Plus, Trash2 } from 'lucide-react';
 import { casesAPI, photosAPI } from '../utils/api';
 import { STATUS_LABELS, STATUS_BADGES, URGENCY_LABELS, URGENCY_BADGES, formatDateTime } from '../utils/helpers';
 import useAuthStore from '../store/authStore';
@@ -161,7 +161,11 @@ export default function CaseDetailPage() {
     { key: 'info',     label: '案件資訊' },
     { key: 'timeline', label: `進度追蹤 (${allActivities.length})` },
     { key: 'photos',   label: `照片記錄 (${c.photos?.length || 0})` },
+    { key: 'notes',    label: '案件備注' },
   ];
+
+  // 案件鎖定（業主已簽收或已結案）
+  const isLocked = isSigned || s === 'closed';
 
   return (
     <div className="page-container">
@@ -208,7 +212,14 @@ export default function CaseDetailPage() {
       {activeTab === 'info' && (
         <div className="grid md:grid-cols-2 gap-5">
           <div className="card card-body space-y-4">
-            <h3 className="font-medium text-sm text-gray-900">案件資訊</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-sm text-gray-900">案件資訊</h3>
+              {isLocked && (
+                <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                  <Lock size={11} /> 已鎖定（業主簽收後不可修改）
+                </span>
+              )}
+            </div>
             <div className="space-y-3 text-sm">
               <div className="flex gap-2"><Building size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div><div className="text-xs text-gray-400">業主/公司</div><div>{c.owner_company || '--'}</div></div></div>
               <div className="flex gap-2"><User size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div><div className="text-xs text-gray-400">聯絡人</div><div>{c.owner_name}</div></div></div>
@@ -355,10 +366,108 @@ export default function CaseDetailPage() {
         </div>
       )}
 
+      {/* ── 案件備注 ── */}
+      {activeTab === 'notes' && (
+        <CaseNotesSection caseId={id} isSigned={isSigned} isLocked={isLocked} />
+      )}
+
       {showDispatch && (
         <DispatchModal caseId={id} onClose={() => setShowDispatch(false)}
           onSuccess={() => { setShowDispatch(false); qc.invalidateQueries(['case', id]); }} />
       )}
+    </div>
+  );
+}
+
+
+// ── 案件備注區塊（獨立元件）────────────────────────────────────
+function CaseNotesSection({ caseId, isSigned, isLocked }) {
+  const { user } = useAuthStore();
+  const [noteText, setNoteText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const { data: notes, refetch } = useQuery(
+    ['caseNotes', caseId],
+    () => casesAPI.getNotes(caseId).then(r => r.data),
+    { staleTime: 30000 }
+  );
+
+  const handleAdd = async () => {
+    if (!noteText.trim()) return;
+    setSubmitting(true);
+    try {
+      await casesAPI.addNote(caseId, { content: noteText.trim() });
+      setNoteText('');
+      refetch();
+      toast.success('備注已新增');
+    } catch (e) { toast.error(e.response?.data?.error || '新增失敗'); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleDelete = async (noteId) => {
+    if (!window.confirm('確定刪除此備注？')) return;
+    try {
+      await casesAPI.deleteNote(caseId, noteId);
+      refetch();
+      toast.success('已刪除');
+    } catch { toast.error('刪除失敗'); }
+  };
+
+  return (
+    <div className="space-y-4">
+      {isLocked && (
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
+          <Lock size={14} />
+          <span>業主已簽收，備注僅可新增，不可修改或刪除</span>
+        </div>
+      )}
+      <div className="card card-body">
+        <label className="form-label">新增備注</label>
+        <textarea
+          value={noteText}
+          onChange={e => setNoteText(e.target.value)}
+          className="form-textarea mb-3"
+          rows={3}
+          placeholder="輸入備注內容..."
+        />
+        <div className="flex justify-end">
+          <button className="btn btn-primary btn-sm gap-1" onClick={handleAdd}
+            disabled={submitting || !noteText.trim()}>
+            <Plus size={13} /> 新增備注
+          </button>
+        </div>
+      </div>
+      <div className="card overflow-hidden">
+        <div className="card-header">
+          <h3 className="card-title">備注記錄（{notes?.length || 0}）</h3>
+        </div>
+        {(!notes || notes.length === 0) ? (
+          <div className="text-center py-10 text-gray-400 text-sm">尚無備注記錄</div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {notes.map((note, idx) => (
+              <div key={note.id} className="flex gap-3 px-5 py-4">
+                <div className="w-7 h-7 rounded-full bg-primary-light flex items-center justify-center text-sm font-bold text-primary-dark flex-shrink-0">
+                  {idx + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 text-sm text-gray-400 mb-1">
+                    <span>{note.author_name || '—'}</span>
+                    <span>·</span>
+                    <span>{new Date(note.created_at).toLocaleString('zh-TW')}</span>
+                  </div>
+                  <div className="text-base text-gray-800 whitespace-pre-wrap">{note.content}</div>
+                </div>
+                {!isLocked && (
+                  <button className="text-gray-300 hover:text-danger flex-shrink-0" onClick={() => handleDelete(note.id)}>
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
