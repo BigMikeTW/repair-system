@@ -89,12 +89,12 @@ const HorizontalTimeline = ({ steps, currentStatus, caseData }) => {
                 </div>
                 {/* 時間 */}
                 {step.time && (
-                  <div className="text-[11px] text-success text-center leading-tight">
+                  <div className="text-xs text-success text-center leading-tight">
                     {formatDateTime(step.time)}
                   </div>
                 )}
                 {!step.time && state === 'active' && (
-                  <div className="text-[11px] text-primary text-center bg-primary/10 rounded px-1 py-0.5">進行中</div>
+                  <div className="text-xs text-primary text-center bg-primary/10 rounded px-1 py-0.5">進行中</div>
                 )}
               </div>
             );
@@ -289,7 +289,7 @@ export default function CaseDetailPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-medium text-gray-700">{a.actor_name || '系統'}</span>
-                        <span className="text-[10px] text-gray-400">{formatDateTime(a.created_at)}</span>
+                        <span className="text-xs text-gray-400">{formatDateTime(a.created_at)}</span>
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">{a.description}</div>
                     </div>

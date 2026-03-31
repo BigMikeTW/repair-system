@@ -206,7 +206,7 @@ export default function DispatchPage() {
                   <span className={`badge ${parseInt(eng.active_tasks) > 0 ? 'badge-warning' : 'badge-success'}`}>
                     {parseInt(eng.active_tasks) > 0 ? `${eng.active_tasks} 個任務` : '可用'}
                   </span>
-                  <div className="text-[10px] text-gray-300 mt-0.5">{eng.phone}</div>
+                  <div className="text-xs text-gray-300 mt-0.5">{eng.phone}</div>
                 </div>
               </div>
             ))}

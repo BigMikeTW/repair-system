@@ -163,7 +163,7 @@ export default function PermissionsPage() {
                       <Shield size={14} className="text-gray-400 flex-shrink-0" />
                       <div>
                         <div className="text-sm font-medium text-gray-800">{mod.label}</div>
-                        <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{mod.desc}</div>
+                        <div className="text-xs text-gray-400 mt-0.5 leading-tight">{mod.desc}</div>
                       </div>
                     </div>
                   </td>
