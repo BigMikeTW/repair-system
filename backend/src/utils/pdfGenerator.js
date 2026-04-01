@@ -248,31 +248,41 @@ function notesBlock(doc, text) {
 
 // ── Sign-off ─────────────────────────────────────────────────
 function signoff(doc, data) {
-  const c1=62,c2=187,c3=62,c4=190,rh=22;
+  const c1=62,c2=187,c3=62,c4=190;
   let y = doc.y;
-  const rows=[
-    {l1:'簽  收  人',v1:data.signed_by||'—',l2:'確 認 事 項',v2:'✓ 工程完工確認  ✓ 品質驗收合格  ✓ 現場清潔完成',green:true},
-    {l1:'完 工 備 注',v1:data.completion_notes||'—',l2:'',v2:''},
-  ];
-  rows.forEach((row,i)=>{
-    doc.rect(LM,y,c1,rh).fill(C.conf2);
-    setFont(doc,false,8.5,C.sub);
-    doc.text(row.l1,LM+6,y+7,{width:c1-8,lineBreak:false});
-    doc.rect(LM+c1,y,c2,rh).fill(C.conf);
-    const big=row.l1==='簽  收  人';
-    setFont(doc,big,big?11:9.5,C.dark);
-    doc.text(row.v1,LM+c1+8,y+(big?4:6),{width:c2-12,lineBreak:false});
-    if(row.l2){
-      doc.rect(LM+c1+c2,y,c3,rh).fill(C.conf2);
-      setFont(doc,false,8.5,C.sub);
-      doc.text(row.l2,LM+c1+c2+6,y+7,{width:c3-8,lineBreak:false});
-      doc.rect(LM+c1+c2+c3,y,c4,rh).fill(C.conf);
-      setFont(doc,false,9,row.green?C.green:C.dark);
-      doc.text(row.v2,LM+c1+c2+c3+8,y+6,{width:c4-12,lineBreak:false});
-    }
-    doc.rect(LM,y+rh-0.4,CW,0.4).fill(C.border);
-    y+=rh;
-  });
+
+  // 第一列：簽收人 + 確認事項（高度加大以容納多行）
+  const rh1 = 36;
+  doc.rect(LM,y,c1,rh1).fill(C.conf2);
+  setFont(doc,false,8.5,C.sub);
+  doc.text('簽  收  人',LM+6,y+13,{width:c1-8,lineBreak:false});
+  doc.rect(LM+c1,y,c2,rh1).fill(C.conf);
+  setFont(doc,true,11,C.dark);
+  doc.text(data.signed_by||'—',LM+c1+8,y+11,{width:c2-12,lineBreak:false});
+  // 確認事項欄位標題
+  doc.rect(LM+c1+c2,y,c3,rh1).fill(C.conf2);
+  setFont(doc,false,8.5,C.sub);
+  doc.text('確 認 事 項',LM+c1+c2+6,y+7,{width:c3-8,lineBreak:false});
+  // 確認事項內容（三行分開顯示，不換行溢位）
+  doc.rect(LM+c1+c2+c3,y,c4,rh1).fill(C.conf);
+  setFont(doc,false,8.5,C.green);
+  doc.text('✓ 工程完工確認',LM+c1+c2+c3+8,y+6,{width:c4-12,lineBreak:false});
+  doc.text('✓ 品質驗收合格',LM+c1+c2+c3+8,y+18,{width:c4-12,lineBreak:false});
+  doc.text('✓ 現場清潔完成',LM+c1+c2+c3+8,y+30,{width:c4-12,lineBreak:false});
+  doc.rect(LM,y+rh1-0.4,CW,0.4).fill(C.border);
+  y += rh1;
+
+  // 第二列：完工備注
+  const rh2 = 22;
+  doc.rect(LM,y,c1,rh2).fill(C.conf2);
+  setFont(doc,false,8.5,C.sub);
+  doc.text('完 工 備 注',LM+6,y+7,{width:c1-8,lineBreak:false});
+  doc.rect(LM+c1,y,c2+c3+c4,rh2).fill(C.conf);
+  setFont(doc,false,9.5,C.dark);
+  doc.text(data.completion_notes||'—',LM+c1+8,y+6,{width:c2+c3+c4-12,lineBreak:false});
+  doc.rect(LM,y+rh2-0.4,CW,0.4).fill(C.border);
+  y += rh2;
+
   doc.rect(LM,doc.y,CW,y-doc.y).stroke(C.border);
   doc.y = y + 4;
 }
