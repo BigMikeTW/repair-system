@@ -1,5 +1,5 @@
 /**
- * pdfGenerator.js — 皇祥工程設計 EnterpriseOS 風格 PDF 產生器
+ * pdfGenerator.js — Pro080 EnterpriseOS 風格 PDF 產生器
  * 使用 PDFKit，中文字型從 Railway 字型路徑載入
  */
 'use strict';
@@ -133,14 +133,14 @@ function drawPage(doc, { titleZh, titleEn, docNumber, dateStr, extraRight, compa
   doc.rect(8.5,0,W-8.5,108).fill(C.hdr);
   doc.rect(8.5,107.5,W-8.5,2.5).fill(C.acc);
 
-  // Logo
-  doc.roundedRect(28,15,22,22,4).fill(C.acc);
-  doc.fillColor(C.white).font('Helvetica-Bold').fontSize(11)
-     .text('S',28,20,{width:22,align:'center',lineBreak:false});
+  // Logo — 「修」字圓角方塊 (#E8614A 底 + 白字)
+  doc.roundedRect(28,14,26,26,5).fill('#E8614A');
+  doc.fillColor(C.white).font('CJK').fontSize(14)
+     .text('修',28,19,{width:26,align:'center',lineBreak:false});
 
   // 公司
   setFont(doc, true, 11, C.dark);
-  doc.text(company||'皇祥工程設計', 57, 19, {lineBreak:false});
+  doc.text(company||'Pro080', 57, 19, {lineBreak:false});
   setFont(doc, false, 8, C.sub);
   doc.text('工程報修管理系統', 57, 33, {lineBreak:false});
 
@@ -167,7 +167,7 @@ function drawPage(doc, { titleZh, titleEn, docNumber, dateStr, extraRight, compa
   doc.rect(8.5,H-40,W-8.5,40).fill(C.hdr);
   doc.rect(8.5,H-40,W-8.5,0.8).fill(C.border);
   setFont(doc, false, 7.5, C.sub);
-  doc.text('皇祥工程設計  工程報修管理系統  ·  VER 1.0  ·  2026', LM, H-27, {lineBreak:false});
+  doc.text('Pro080  工程報修管理系統  ·  VER 1.0  ·  2026', LM, H-27, {lineBreak:false});
   doc.font('Courier').fontSize(7.5).fillColor(C.sub)
      .text('PAGE  01', 0, H-27, {width:W-RM,align:'right',lineBreak:false});
 
@@ -245,7 +245,7 @@ function timeRecord(doc, dates) {
   doc.y = y + h + 7;
 }
 
-// ── 備注 ─────────────────────────────────────────────────────
+// ── 備註 ─────────────────────────────────────────────────────
 function notesBlock(doc, text) {
   const y = doc.y;
   const h = Math.max(32, 18 + doc.heightOfString(text,{width:CW-26}));
@@ -307,7 +307,7 @@ function signoff(doc, data) {
   doc.rect(LM, y+rh1-0.4, CW, 0.4).fill(C.border);
   y += rh1;
 
-  // ── 第二列：完工備注（橫跨右三欄）───────────────────────────────
+  // ── 第二列：完工備註（橫跨右三欄）───────────────────────────────
   doc.rect(LM, y, c1, rh2).fill(C.conf2);
   setFont(doc, false, FONT_LBL, C.sub);
   doc.text('完 工 備 注', LM+PAD, y+PAD, {width:c1-PAD*2, lineBreak:false});

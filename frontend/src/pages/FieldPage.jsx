@@ -426,9 +426,9 @@ export default function FieldPage() {
                     </div>
 
                     <div>
-                      <label className="form-label">打卡備注</label>
+                      <label className="form-label">打卡備註</label>
                       <textarea className="form-textarea" rows={2} value={notes}
-                        onChange={e => setNotes(e.target.value)} placeholder="施工狀況備注..." />
+                        onChange={e => setNotes(e.target.value)} placeholder="施工狀況備註..." />
                     </div>
                   </div>
 

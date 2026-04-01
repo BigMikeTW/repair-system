@@ -102,7 +102,7 @@ function ReassignModal({ caseData, engineers, onClose, onSuccess }) {
               onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder="例：原工程師請假、緊急調度..." />
           </div>
           <div>
-            <label className="form-label">派工備注</label>
+            <label className="form-label">派工備註</label>
             <textarea className="form-textarea" rows={2} value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="注意事項、特殊要求..." />
           </div>

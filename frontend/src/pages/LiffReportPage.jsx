@@ -97,7 +97,7 @@ export default function LiffReportPage() {
   // 完成頁面
   if (step === 'done') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] to-[#0F3460] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#F5F0EA] to-[#EDE8E0] flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl w-full max-w-sm p-8 text-center shadow-2xl">
           <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={40} className="text-green-500" />
@@ -106,11 +106,11 @@ export default function LiffReportPage() {
           <p className="text-gray-500 text-sm mb-6">客服人員將盡快與您聯繫</p>
           <div className="bg-orange-50 rounded-xl p-4 mb-6">
             <div className="text-xs text-gray-400 mb-1">您的案件編號</div>
-            <div className="text-2xl font-mono font-bold text-[#FF6B00]">{submittedCase?.case_number}</div>
+            <div className="text-2xl font-mono font-bold text-[#E8614A]">{submittedCase?.case_number}</div>
             <div className="text-xs text-gray-400 mt-1">請保存此編號以便查詢進度</div>
           </div>
           <a href={`/track/${submittedCase?.case_number}`}
-            className="block w-full bg-[#FF6B00] text-white py-3 rounded-xl font-medium text-center mb-3">
+            className="block w-full bg-[#E8614A] text-white py-3 rounded-xl font-medium text-center mb-3">
             查詢案件進度
           </a>
           {window.liff?.isInClient() && (
@@ -130,7 +130,7 @@ export default function LiffReportPage() {
       {[1, 2, 3].map(s => (
         <React.Fragment key={s}>
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-            step === s ? 'bg-[#FF6B00] text-white shadow-lg scale-110' :
+            step === s ? 'bg-[#E8614A] text-white shadow-lg scale-110' :
             step > s ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
           }`}>
             {step > s ? '✓' : s}
@@ -143,7 +143,7 @@ export default function LiffReportPage() {
 
   if (!liffReady) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] to-[#0F3460] flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#F5F0EA] to-[#EDE8E0] flex items-center justify-center">
         <div className="text-center text-white">
           <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-sm opacity-70">載入中...</p>
@@ -153,11 +153,11 @@ export default function LiffReportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] to-[#0F3460]">
+    <div className="min-h-screen bg-gradient-to-br from-[#F5F0EA] to-[#EDE8E0]">
       {/* Header */}
       <div className="px-4 pt-6 pb-4 text-center">
-        <div className="text-[#FF6B00] text-xs font-bold tracking-widest mb-1">皇祥工程設計</div>
-        <h1 className="text-white text-xl font-bold">線上報修申請</h1>
+        <div className="text-[#E8614A] text-xs font-bold tracking-widest mb-1">Pro080</div>
+        <h1 className="text-[#1A1A1A] text-xl font-bold">線上報修申請</h1>
         {lineUser && (
           <div className="flex items-center justify-center gap-2 mt-2">
             <img src={lineUser.pictureUrl} alt="" className="w-6 h-6 rounded-full" />
@@ -194,7 +194,7 @@ export default function LiffReportPage() {
                   }
                   setStep(2);
                 }}
-                className="w-full flex items-center justify-center gap-2 bg-[#FF6B00] text-white py-3 rounded-xl font-medium mt-4">
+                className="w-full flex items-center justify-center gap-2 bg-[#E8614A] text-white py-3 rounded-xl font-medium mt-4">
                 下一步 <ChevronRight size={18} />
               </button>
             </div>
@@ -211,7 +211,7 @@ export default function LiffReportPage() {
                     <button key={t.id} onClick={() => update('case_type', t.name)}
                       className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${
                         form.case_type === t.name
-                          ? 'border-[#FF6B00] bg-orange-50 text-[#FF6B00]'
+                          ? 'border-[#E8614A] bg-orange-50 text-[#E8614A]'
                           : 'border-gray-200 text-gray-600 hover:border-gray-300'
                       }`}>
                       {t.name}
@@ -254,7 +254,7 @@ export default function LiffReportPage() {
                     return;
                   }
                   setStep(3);
-                }} className="flex-1 flex items-center justify-center gap-2 bg-[#FF6B00] text-white py-3 rounded-xl font-medium">
+                }} className="flex-1 flex items-center justify-center gap-2 bg-[#E8614A] text-white py-3 rounded-xl font-medium">
                   下一步 <ChevronRight size={18} />
                 </button>
               </div>
@@ -277,7 +277,7 @@ export default function LiffReportPage() {
                   </div>
                 ))}
                 {photos.length < 3 && (
-                  <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#FF6B00] transition-colors">
+                  <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#E8614A] transition-colors">
                     <Camera size={24} className="text-gray-400 mb-1" />
                     <span className="text-xs text-gray-400">新增照片</span>
                     <input type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handlePhotoUpload} />
@@ -299,7 +299,7 @@ export default function LiffReportPage() {
                   <ChevronLeft size={18} /> 上一步
                 </button>
                 <button onClick={handleSubmit} disabled={submitting}
-                  className="flex-1 flex items-center justify-center gap-2 bg-[#FF6B00] text-white py-3 rounded-xl font-medium disabled:opacity-60">
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#E8614A] text-white py-3 rounded-xl font-medium disabled:opacity-60">
                   {submitting ? '送出中...' : '確認送出'}
                 </button>
               </div>

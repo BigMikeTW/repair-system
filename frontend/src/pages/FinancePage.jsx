@@ -34,7 +34,7 @@ function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
   const remarks = getCustomRemarks(module);
   const defaultHeader = headers.find(h => h.isDefault);
   const [selectedCompany, setSelectedCompany] = useState(
-    defaultHeader?.name_zh || '皇祥工程設計'
+    defaultHeader?.name_zh || 'Pro080'
   );
   const [selectedRemarks, setSelectedRemarks] = useState([]);
 
@@ -74,7 +74,7 @@ function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
             <label className="form-label">公司名稱（左上角）</label>
             <select className="form-select" value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)}>
               <option value="" disabled>請選擇公司</option>
-              <option value="皇祥工程設計">皇祥工程設計（系統預設）</option>
+              {!headers?.length && <option value="Pro080">Pro080</option>}
               {headers.map((h, i) => (
                 <option key={i} value={h.name_zh}>
                   {h.name_zh}{h.isDefault ? '（預設）' : ''}
@@ -84,7 +84,7 @@ function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
           </div>
           {remarks.length > 0 && (
             <div>
-              <label className="form-label">顯示備注</label>
+              <label className="form-label">顯示備註</label>
               <div className="space-y-2">
                 {remarks.map((r, i) => (
                   <label key={i} className="flex items-center gap-2 cursor-pointer">
@@ -243,7 +243,7 @@ function QuotationFormInner({ onClose, onSuccess, editData, loadedItems }) {
             </div>
           </div>
           <div>
-            <label className="form-label">備注</label>
+            <label className="form-label">備註</label>
             <textarea {...register('notes')} className="form-textarea" rows={2} />
           </div>
           <div className="flex justify-end gap-3">
@@ -301,7 +301,7 @@ function ClosureForm({ onClose, onSuccess, editData }) {
             <input {...register('summary')} className="form-control" placeholder="本次工程完成事項..." />
           </div>
           <div>
-            <label className="form-label">備注</label>
+            <label className="form-label">備註</label>
             <textarea {...register('notes')} className="form-textarea" rows={3} />
           </div>
           <div className="flex justify-end gap-3">
@@ -446,7 +446,7 @@ function InvoiceForm({ onClose, onSuccess, editData }) {
             <input {...register('due_date')} type="date" className="form-control" />
           </div>
           <div>
-            <label className="form-label">備注</label>
+            <label className="form-label">備註</label>
             <textarea {...register('notes')} className="form-textarea" rows={2} />
           </div>
           <div className="flex justify-end gap-3">
@@ -543,7 +543,7 @@ function ReceiptForm({ onClose, onSuccess, editData }) {
             )}
           </div>
           <div>
-            <label className="form-label">備注</label>
+            <label className="form-label">備註</label>
             <textarea {...register('notes')} className="form-textarea" rows={2} />
           </div>
           <div className="flex justify-end gap-3">
@@ -620,7 +620,7 @@ export default function FinancePage() {
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1 className="page-title">財務管理</h1>
+        <h1 className="page-title">帳務管理</h1>
         <button className="btn btn-primary btn-sm" onClick={tabAddBtns[tab].action}>
           {tabAddBtns[tab].label}
         </button>
@@ -730,7 +730,7 @@ export default function FinancePage() {
         <div className="card overflow-hidden">
           <table className="table-base">
             <thead>
-              <tr><th>收款單號</th><th>請款單</th><th>業主</th><th>收款金額</th><th>付款方式</th><th>入帳帳號</th><th>備注</th><th>日期</th><th>操作</th></tr>
+              <tr><th>收款單號</th><th>請款單</th><th>業主</th><th>收款金額</th><th>付款方式</th><th>入帳帳號</th><th>備註</th><th>日期</th><th>操作</th></tr>
             </thead>
             <tbody>
               {receipts?.map(rec => (

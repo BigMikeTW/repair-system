@@ -115,9 +115,9 @@ function LicenseModal({ userId, license, onClose, onSuccess }) {
             </div>
           </div>
           <div>
-            <label className="form-label">備注</label>
+            <label className="form-label">備註</label>
             <textarea {...register('notes')} className="form-textarea" rows={2}
-              placeholder="其他備注..." />
+              placeholder="其他備註..." />
           </div>
           <div>
             <label className="form-label">證照影像（JPG/PNG/PDF）</label>
@@ -212,7 +212,7 @@ function InsuranceModal({ userId, record, onClose, onSuccess }) {
             </div>
           </div>
           <div>
-            <label className="form-label">備注</label>
+            <label className="form-label">備註</label>
             <textarea {...register('notes')} className="form-textarea" rows={2} />
           </div>
           <div>
@@ -597,7 +597,7 @@ export default function UserDetailPage() {
                       )}
                     </div>
 
-                    {lic.notes && <div className="text-xs text-gray-400 mt-1">備注：{lic.notes}</div>}
+                    {lic.notes && <div className="text-xs text-gray-400 mt-1">備註：{lic.notes}</div>}
 
                     {lic.file_url ? (
                       <a href={lic.file_url} target="_blank" rel="noopener noreferrer"
@@ -647,7 +647,7 @@ export default function UserDetailPage() {
                         {ins.insured_salary && <div>投保薪資：${Number(ins.insured_salary).toLocaleString()}</div>}
                         {ins.insurer_name && <div>投保單位：{ins.insurer_name}</div>}
                       </div>
-                      {ins.notes && <div className="text-xs text-gray-400 mt-1">備注：{ins.notes}</div>}
+                      {ins.notes && <div className="text-xs text-gray-400 mt-1">備註：{ins.notes}</div>}
                       {ins.proof_url && (
                         <a href={ins.proof_url} target="_blank" rel="noopener noreferrer"
                           className="text-xs text-primary hover:underline flex items-center gap-1 mt-2">

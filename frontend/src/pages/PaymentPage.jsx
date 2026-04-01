@@ -47,7 +47,7 @@ function PaymentModal({ invoice, onClose, onSuccess }) {
             <input {...register('reference_number')} className="form-control" placeholder="銀行交易編號" />
           </div>
           <div>
-            <label className="form-label">備注</label>
+            <label className="form-label">備註</label>
             <textarea {...register('notes')} className="form-textarea" rows={2} />
           </div>
           <div className="flex justify-end gap-3">

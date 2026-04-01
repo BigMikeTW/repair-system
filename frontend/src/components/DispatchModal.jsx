@@ -53,7 +53,7 @@ export default function DispatchModal({ caseId, caseData, onClose, onSuccess }) 
             </div>
           </div>
           <div>
-            <label className="form-label">派工備注</label>
+            <label className="form-label">派工備註</label>
             <textarea {...register('notes')} className="form-textarea" rows={3} placeholder="注意事項、特殊要求..." />
           </div>
           <div className="flex justify-end gap-3">

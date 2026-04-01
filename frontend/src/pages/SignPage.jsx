@@ -140,9 +140,9 @@ export default function SignPage() {
           />
         </div>
 
-        {/* 意見備注 */}
+        {/* 意見備註 */}
         <div>
-          <label className="form-label">意見備注（選填）</label>
+          <label className="form-label">意見備註（選填）</label>
           <textarea
             className="form-textarea"
             rows={3}

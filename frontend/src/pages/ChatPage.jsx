@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from 'react-query';
-import { Send, MessageSquare } from 'lucide-react';
+import { Send, MessageSquare, Users } from 'lucide-react';
 import { chatAPI } from '../utils/api';
 import { formatDateTime, ROLE_LABELS } from '../utils/helpers';
 import useAuthStore from '../store/authStore';
@@ -9,6 +9,8 @@ import useSocket from '../hooks/useSocket';
 
 export default function ChatPage() {
   const { caseId } = useParams();
+  const [searchParams] = useSearchParams();
+  const isInternal = searchParams.get('internal') === '1';
   const { user } = useAuthStore();
   const socket = useSocket();
   const qc = useQueryClient();
@@ -83,7 +85,12 @@ export default function ChatPage() {
       {/* Conversation list */}
       <div className="w-64 bg-white border-r border-gray-100 flex flex-col flex-shrink-0">
         <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="text-sm font-medium text-gray-900">客服對話</h2>
+          <h2 className="text-sm font-medium text-gray-900">
+            {isInternal ? '內部對話' : '客服對話'}
+          </h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {isInternal ? '與工程師溝通派工事項' : '與業主溝通案件進度'}
+          </p>
         </div>
         <div className="flex-1 overflow-y-auto">
           {conversations?.map(conv => (
@@ -92,16 +99,27 @@ export default function ChatPage() {
               className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 ${activeCaseId === conv.id ? 'bg-primary-light' : ''}`}
               onClick={() => selectConversation(conv.id)}
             >
+              {/* 第一行：案件編號（最上方，放大加粗）*/}
               <div className="flex items-center justify-between mb-0.5">
-                <span className="text-xs font-medium text-gray-800 truncate">{conv.owner_company || conv.owner_name || conv.title}</span>
+                <span className="text-sm font-bold text-primary truncate">{conv.case_number}</span>
                 {parseInt(conv.unread_count) > 0 && (
                   <span className="w-4 h-4 text-xs bg-danger text-white rounded-full flex items-center justify-center flex-shrink-0 ml-1">
                     {conv.unread_count}
                   </span>
                 )}
               </div>
+              {/* 第二行：最後訊息 */}
               <div className="text-xs text-gray-400 truncate">{conv.last_message || '暫無訊息'}</div>
-              <div className="text-xs text-primary mt-0.5">{conv.case_number}</div>
+              {/* 第三行：業主名稱 + 案件類型 */}
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-xs text-gray-600 truncate">{conv.owner_company || conv.owner_name || '—'}</span>
+                {conv.case_type && (
+                  <>
+                    <span className="text-gray-300">·</span>
+                    <span className="text-xs text-gray-400 truncate">{conv.case_type}</span>
+                  </>
+                )}
+              </div>
             </button>
           ))}
           {!conversations?.length && (

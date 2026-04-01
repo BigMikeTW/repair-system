@@ -29,9 +29,9 @@ const navConfig = [
     ]
   },
   {
-    section: '財務管理',
+    section: '帳務管理',
     items: [
-      { to: '/finance', icon: FileText, label: '帳務處理', roles: ['admin','customer_service'] },
+      { to: '/finance', icon: FileText, label: '帳務管理', roles: ['admin','customer_service'] },
     ]
   },
   {

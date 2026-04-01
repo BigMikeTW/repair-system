@@ -31,7 +31,7 @@ function DEFAULT_ROLES() {
 const ALL_MODULES = [
   { key: 'cases',    label: '案件管理',   desc: '案件建立、查看、追蹤' },
   { key: 'dispatch', label: '派工管理',   desc: '派工、取消、重新指派' },
-  { key: 'finance',  label: '財務管理',   desc: '報價單、結案單、請款單、收款單' },
+  { key: 'finance',  label: '帳務管理',   desc: '報價單、結案單、請款單、收款單' },
   { key: 'photos',   label: '照片記錄',   desc: '施工照片上傳與管理' },
   { key: 'notes',    label: '案件記錄',   desc: '現場施工記錄' },
   { key: 'users',    label: '人員管理',   desc: '人員帳號與 HR 資料' },
@@ -134,7 +134,7 @@ function BankAccountSettings() {
                 <input {...register('account_name')} className="form-control" placeholder="帳戶戶名" />
               </div>
               <div>
-                <label className="form-label">備注（選填）</label>
+                <label className="form-label">備註（選填）</label>
                 <input {...register('notes')} className="form-control" placeholder="例：公司主帳戶" />
               </div>
               <div className="flex justify-end gap-2 pt-1">
@@ -498,7 +498,7 @@ const PDF_MODULES = [
   { key: 'closure',   label: '結案報告' },
 ];
 
-// ── 自定備注設定 ─────────────────────────────────────────────
+// ── 自定備註設定 ─────────────────────────────────────────────
 function RemarksSettings() {
   const getRemarks = () => { try { return JSON.parse(localStorage.getItem('custom_remarks') || '[]'); } catch { return []; } };
   const saveRemarks = (v) => localStorage.setItem('custom_remarks', JSON.stringify(v));
@@ -513,7 +513,7 @@ function RemarksSettings() {
   const openEdit = (r, idx) => { setForm({ idx }); setName(r.name); setContent(r.content||''); setModules(r.modules||[]); };
 
   const save = () => {
-    if (!name.trim()) return toast.error('請輸入備注名稱');
+    if (!name.trim()) return toast.error('請輸入備註名稱');
     const newRemark = { id: form.idx !== undefined ? remarks[form.idx].id : Date.now(), name: name.trim(), content: content.trim(), modules };
     let updated;
     if (form.idx !== undefined) {
@@ -524,11 +524,11 @@ function RemarksSettings() {
     saveRemarks(updated);
     setRemarks(updated);
     setForm(null);
-    toast.success(form.idx !== undefined ? '備注已更新' : '備注已新增');
+    toast.success(form.idx !== undefined ? '備註已更新' : '備註已新增');
   };
 
   const remove = (idx) => {
-    if (!window.confirm('確定刪除此備注？')) return;
+    if (!window.confirm('確定刪除此備註？')) return;
     const updated = remarks.filter((_, i) => i !== idx);
     saveRemarks(updated);
     setRemarks(updated);
@@ -539,14 +539,14 @@ function RemarksSettings() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-semibold text-gray-900">自定備注</h3>
-          <p className="text-sm text-gray-400 mt-0.5">設定 PDF 文件備注，可選擇適用的文件類型</p>
+          <h3 className="font-semibold text-gray-900">自定備註</h3>
+          <p className="text-sm text-gray-400 mt-0.5">設定 PDF 文件備註，可選擇適用的文件類型</p>
         </div>
-        <button className="btn btn-sm btn-primary gap-1" onClick={openNew}><Plus size={13} /> 新增備注</button>
+        <button className="btn btn-sm btn-primary gap-1" onClick={openNew}><Plus size={13} /> 新增備註</button>
       </div>
 
       {remarks.length === 0 && (
-        <div className="text-center py-10 text-gray-400 text-sm">尚無自定備注</div>
+        <div className="text-center py-10 text-gray-400 text-sm">尚無自定備註</div>
       )}
       <div className="space-y-2">
         {remarks.map((r, idx) => (
@@ -574,17 +574,17 @@ function RemarksSettings() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md shadow-xl">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold">{form.idx !== undefined ? '修改備注' : '新增備注'}</h3>
+              <h3 className="font-semibold">{form.idx !== undefined ? '修改備註' : '新增備註'}</h3>
               <button className="btn btn-sm" onClick={() => setForm(null)}><X size={14} /></button>
             </div>
             <div className="p-5 space-y-4">
               <div>
-                <label className="form-label">備注名稱 *</label>
+                <label className="form-label">備註名稱 *</label>
                 <input value={name} onChange={e => setName(e.target.value)} className="form-control" placeholder="例：施工保固聲明" />
               </div>
               <div>
-                <label className="form-label">備注內容</label>
-                <textarea value={content} onChange={e => setContent(e.target.value)} className="form-textarea" rows={4} placeholder="備注文字內容..." />
+                <label className="form-label">備註內容</label>
+                <textarea value={content} onChange={e => setContent(e.target.value)} className="form-textarea" rows={4} placeholder="備註文字內容..." />
               </div>
               <div>
                 <label className="form-label">適用文件類型</label>
@@ -611,7 +611,7 @@ function RemarksSettings() {
   );
 }
 
-// ── 報表台頭設定 ─────────────────────────────────────────────
+// ── 報表擡頭設定 ─────────────────────────────────────────────
 function CompanyHeaderSettings() {
   const getHeaders = () => { try { return JSON.parse(localStorage.getItem('company_headers') || '[]'); } catch { return []; } };
   const saveHeaders = (v) => localStorage.setItem('company_headers', JSON.stringify(v));
@@ -652,11 +652,11 @@ function CompanyHeaderSettings() {
     saveHeaders(updated);
     setHeaders(updated);
     setForm(null);
-    toast.success(form.idx !== undefined ? '台頭已更新' : '台頭已新增');
+    toast.success(form.idx !== undefined ? '擡頭已更新' : '擡頭已新增');
   };
 
   const remove = (idx) => {
-    if (!window.confirm('確定刪除此台頭設定？')) return;
+    if (!window.confirm('確定刪除此擡頭設定？')) return;
     const updated = headers.filter((_, i) => i !== idx);
     saveHeaders(updated);
     setHeaders(updated);
@@ -667,14 +667,14 @@ function CompanyHeaderSettings() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-semibold text-gray-900">報表台頭設定</h3>
+          <h3 className="font-semibold text-gray-900">報表擡頭設定</h3>
           <p className="text-sm text-gray-400 mt-0.5">設定 PDF 文件左上角的公司資訊</p>
         </div>
-        <button className="btn btn-sm btn-primary gap-1" onClick={openNew}><Plus size={13} /> 新增台頭</button>
+        <button className="btn btn-sm btn-primary gap-1" onClick={openNew}><Plus size={13} /> 新增擡頭</button>
       </div>
 
       {headers.length === 0 && (
-        <div className="text-center py-10 text-gray-400 text-sm">尚無台頭設定，下載 PDF 時將使用預設值「皇祥工程設計」</div>
+        <div className="text-center py-10 text-gray-400 text-sm">尚無擡頭設定，下載 PDF 時將使用預設值「Pro080」</div>
       )}
       <div className="space-y-2">
         {headers.map((h, idx) => (
@@ -703,14 +703,14 @@ function CompanyHeaderSettings() {
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-semibold">{form.idx !== undefined ? '修改台頭' : '新增台頭'}</h3>
+              <h3 className="font-semibold">{form.idx !== undefined ? '修改擡頭' : '新增擡頭'}</h3>
               <button className="btn btn-sm" onClick={() => setForm(null)}><X size={14} /></button>
             </div>
             <div className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <label className="form-label">公司中文全名 *</label>
-                  <input value={fd.name_zh||''} onChange={e => setFd(p=>({...p,name_zh:e.target.value}))} className="form-control" placeholder="例：皇祥工程設計有限公司" />
+                  <input value={fd.name_zh||''} onChange={e => setFd(p=>({...p,name_zh:e.target.value}))} className="form-control" placeholder="例：Pro080有限公司" />
                 </div>
                 <div className="col-span-2">
                   <label className="form-label">公司英文全名</label>
@@ -757,10 +757,10 @@ export default function SystemSettingsPage() {
   const [tab, setTab] = useState('finance');
 
   const TABS = [
-    { key: 'finance', label: '財務管理',   icon: CreditCard },
+    { key: 'finance', label: '帳務管理',   icon: CreditCard },
     { key: 'roles',   label: '角色管理',   icon: Users },
-    { key: 'remarks', label: '自定備注',   icon: StickyNote },
-    { key: 'headers', label: '報表台頭',   icon: Building2 },
+    { key: 'remarks', label: '自定備註',   icon: StickyNote },
+    { key: 'headers', label: '報表擡頭',   icon: Building2 },
   ];
 
   return (
@@ -768,7 +768,7 @@ export default function SystemSettingsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">功能設定</h1>
-          <p className="text-sm text-gray-500 mt-0.5">系統功能參數設定、角色管理、備注與報表台頭</p>
+          <p className="text-sm text-gray-500 mt-0.5">系統功能參數設定、角色管理、備註與報表擡頭</p>
         </div>
       </div>
 

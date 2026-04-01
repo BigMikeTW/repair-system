@@ -254,8 +254,8 @@ export default function FieldQuotePage() {
           </div>
 
           <div>
-            <label className="form-label">備注</label>
-            <textarea {...register('notes')} className="form-textarea" rows={2} placeholder="付款條件、施工說明等備注..." />
+            <label className="form-label">備註</label>
+            <textarea {...register('notes')} className="form-textarea" rows={2} placeholder="付款條件、施工說明等備註..." />
           </div>
         </div>
 

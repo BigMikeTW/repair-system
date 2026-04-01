@@ -57,7 +57,7 @@ export default function CaseTypesPage() {
     <div className="page-container max-w-2xl">
       <div className="page-header">
         <div>
-          <h1 className="page-title">報修類型管理</h1>
+          <h1 className="page-title">報修類型</h1>
           <p className="text-xs text-gray-400 mt-0.5">新增、修改、停用報修類型</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowAdd(true)}>

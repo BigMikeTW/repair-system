@@ -101,8 +101,8 @@ const buildCaseStatusFlex = (c, title, subtitle) => ({
           contents: [
             {
               type: 'text',
-              text: '皇祥工程設計',
-              color: '#FF6B00',
+              text: 'Pro080',
+              color: '#E8614A',
               size: 'xs',
               weight: 'bold',
             },
@@ -119,7 +119,7 @@ const buildCaseStatusFlex = (c, title, subtitle) => ({
         { type: 'text', text: title, color: '#FFFFFF', size: 'lg', weight: 'bold', margin: 'sm' },
         { type: 'text', text: subtitle, color: '#CCCCCC', size: 'sm', wrap: true },
       ],
-      backgroundColor: '#1A1A2E',
+      backgroundColor: '#E8614A',
       paddingAll: '16px',
     },
     body: {
@@ -156,7 +156,7 @@ const buildCaseStatusFlex = (c, title, subtitle) => ({
           layout: 'horizontal',
           contents: [
             { type: 'text', text: '負責工程師', size: 'sm', color: '#888888', flex: 2 },
-            { type: 'text', text: c.engineer_name, size: 'sm', weight: 'bold', color: '#FF6B00', flex: 3 },
+            { type: 'text', text: c.engineer_name, size: 'sm', weight: 'bold', color: '#E8614A', flex: 3 },
           ],
         }] : []),
         ...(c.scheduled_start ? [{
@@ -227,7 +227,7 @@ const buildCaseStatusFlex = (c, title, subtitle) => ({
             uri: `${FRONTEND_URL}/track/${c.case_number}`,
           },
           style: 'primary',
-          color: '#FF6B00',
+          color: '#E8614A',
           height: 'sm',
         },
       ],
@@ -246,7 +246,7 @@ const buildEngineerDispatchFlex = (c, engineerName) => ({
     header: {
       type: 'box',
       layout: 'vertical',
-      backgroundColor: '#0F3460',
+      backgroundColor: '#F4956A',
       paddingAll: '16px',
       contents: [
         { type: 'text', text: '🔧 新任務指派', color: '#FFFFFF', size: 'lg', weight: 'bold' },
@@ -264,7 +264,7 @@ const buildEngineerDispatchFlex = (c, engineerName) => ({
           layout: 'horizontal',
           contents: [
             { type: 'text', text: '案件編號', size: 'sm', color: '#888888', flex: 2 },
-            { type: 'text', text: c.case_number, size: 'sm', weight: 'bold', color: '#FF6B00', flex: 3 },
+            { type: 'text', text: c.case_number, size: 'sm', weight: 'bold', color: '#E8614A', flex: 3 },
           ],
         },
         {
@@ -342,7 +342,7 @@ const buildEngineerDispatchFlex = (c, engineerName) => ({
             uri: `${FRONTEND_URL}/field`,
           },
           style: 'primary',
-          color: '#0F3460',
+          color: '#F4956A',
           height: 'sm',
         },
       ],
@@ -458,10 +458,10 @@ const buildReportFormFlex = () => ({
     header: {
       type: 'box',
       layout: 'vertical',
-      backgroundColor: '#1A1A2E',
+      backgroundColor: '#E8614A',
       paddingAll: '16px',
       contents: [
-        { type: 'text', text: '皇祥工程設計', color: '#FF6B00', size: 'xs', weight: 'bold' },
+        { type: 'text', text: 'Pro080', color: '#E8614A', size: 'xs', weight: 'bold' },
         { type: 'text', text: '線上報修申請', color: '#FFFFFF', size: 'xl', weight: 'bold', margin: 'sm' },
         { type: 'text', text: '請點擊下方按鈕填寫報修資料', color: '#AAAAAA', size: 'sm' },
       ],
@@ -536,7 +536,7 @@ const buildReportFormFlex = () => ({
             uri: `${FRONTEND_URL}/public/report`,
           },
           style: 'primary',
-          color: '#FF6B00',
+          color: '#E8614A',
           height: 'sm',
         },
         {

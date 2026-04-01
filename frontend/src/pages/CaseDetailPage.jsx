@@ -161,7 +161,7 @@ export default function CaseDetailPage() {
     { key: 'info',     label: '案件資訊' },
     { key: 'timeline', label: `進度追蹤 (${allActivities.length})` },
     { key: 'photos',   label: `照片記錄 (${c.photos?.length || 0})` },
-    { key: 'notes',    label: '案件備注' },
+    { key: 'notes',    label: '案件備註' },
   ];
 
   // 案件鎖定（業主已簽收或已結案）
@@ -182,7 +182,8 @@ export default function CaseDetailPage() {
           <h1 className="text-base font-semibold text-gray-900 mt-1 truncate">{c.title}</h1>
         </div>
         <div className="flex gap-2 flex-wrap flex-shrink-0">
-          <Link to={`/chat/${id}`} className="btn btn-sm"><MessageSquare size={13} /> 客服對談</Link>
+          <Link to={`/chat/${id}`} className="btn btn-sm"><MessageSquare size={13} /> 客服對話</Link>
+          <Link to={`/chat/${id}?internal=1`} className="btn btn-sm btn-outline"><MessageSquare size={13} /> 內部對話</Link>
           {(s === 'in_progress' || s === 'signing') && (canManage() || isEngineer()) && (
             <Link to={`/cases/${id}/sign`} className="btn btn-primary btn-sm">業主簽收</Link>
           )}
@@ -262,7 +263,7 @@ export default function CaseDetailPage() {
                     </div>
                   </div>
                 )}
-                {c.completion_notes && <div className="text-xs text-gray-500">備注：{c.completion_notes}</div>}
+                {c.completion_notes && <div className="text-xs text-gray-500">備註：{c.completion_notes}</div>}
                 {c.drive_pdf_link && (
                   <a href={c.drive_pdf_link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
                     <FileText size={11} /> 查看結案 PDF
@@ -366,7 +367,7 @@ export default function CaseDetailPage() {
         </div>
       )}
 
-      {/* ── 案件備注 ── */}
+      {/* ── 案件備註 ── */}
       {activeTab === 'notes' && (
         <CaseNotesSection caseId={id} isSigned={isSigned} isLocked={isLocked} />
       )}
@@ -380,7 +381,7 @@ export default function CaseDetailPage() {
 }
 
 
-// ── 案件備注區塊（獨立元件）────────────────────────────────────
+// ── 案件備註區塊（獨立元件）────────────────────────────────────
 function CaseNotesSection({ caseId, isSigned, isLocked }) {
   const { user } = useAuthStore();
   const [noteText, setNoteText] = useState('');
@@ -399,7 +400,7 @@ function CaseNotesSection({ caseId, isSigned, isLocked }) {
       await casesAPI.addNote(caseId, { content: noteText.trim() });
       setNoteText('');
       refetch();
-      toast.success('備注已新增');
+      toast.success('備註已新增');
     } catch (e) { toast.error(e.response?.data?.error || '新增失敗'); }
     finally { setSubmitting(false); }
   };
@@ -418,12 +419,12 @@ function CaseNotesSection({ caseId, isSigned, isLocked }) {
       await casesAPI.updateNote(caseId, noteId, { content: editText.trim() });
       setEditingId(null);
       refetch();
-      toast.success('備注已更新');
+      toast.success('備註已更新');
     } catch { toast.error('更新失敗'); }
   };
 
   const handleDelete = async (noteId) => {
-    if (!window.confirm('確定刪除此備注？')) return;
+    if (!window.confirm('確定刪除此備註？')) return;
     try {
       await casesAPI.deleteNote(caseId, noteId);
       refetch();
@@ -436,31 +437,31 @@ function CaseNotesSection({ caseId, isSigned, isLocked }) {
       {isLocked && (
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
           <Lock size={14} />
-          <span>業主已簽收，備注僅可新增，不可修改或刪除</span>
+          <span>業主已簽收，備註僅可新增，不可修改或刪除</span>
         </div>
       )}
       <div className="card card-body">
-        <label className="form-label">新增備注</label>
+        <label className="form-label">新增備註</label>
         <textarea
           value={noteText}
           onChange={e => setNoteText(e.target.value)}
           className="form-textarea mb-3"
           rows={3}
-          placeholder="輸入備注內容..."
+          placeholder="輸入備註內容..."
         />
         <div className="flex justify-end">
           <button className="btn btn-primary btn-sm gap-1" onClick={handleAdd}
             disabled={submitting || !noteText.trim()}>
-            <Plus size={13} /> 新增備注
+            <Plus size={13} /> 新增備註
           </button>
         </div>
       </div>
       <div className="card overflow-hidden">
         <div className="card-header">
-          <h3 className="card-title">備注記錄（{notes?.length || 0}）</h3>
+          <h3 className="card-title">備註記錄（{notes?.length || 0}）</h3>
         </div>
         {(!notes || notes.length === 0) ? (
-          <div className="text-center py-10 text-gray-400 text-sm">尚無備注記錄</div>
+          <div className="text-center py-10 text-gray-400 text-sm">尚無備註記錄</div>
         ) : (
           <div className="divide-y divide-gray-50">
             {notes.map((note, idx) => (

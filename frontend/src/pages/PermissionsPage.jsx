@@ -115,7 +115,7 @@ export default function PermissionsPage() {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1 className="page-title">人員權限設定</h1>
+          <h1 className="page-title">權限設定</h1>
           <p className="text-xs text-gray-400 mt-0.5">設定各角色對各功能模組的修改及刪除權限</p>
         </div>
         <div className="flex gap-2">

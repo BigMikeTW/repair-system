@@ -21,7 +21,7 @@ function StatusTimeline({ currentStatus }) {
     <div className="flex items-center justify-between relative">
       <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-200 z-0" />
       <div
-        className="absolute top-5 left-0 h-0.5 bg-[#FF6B00] z-0 transition-all duration-500"
+        className="absolute top-5 left-0 h-0.5 bg-[#E8614A] z-0 transition-all duration-500"
         style={{ width: `${Math.max(0, (currentIdx / (STATUS_STEPS.length - 1)) * 100)}%` }}
       />
       {STATUS_STEPS.map((step, idx) => {
@@ -30,13 +30,13 @@ function StatusTimeline({ currentStatus }) {
         return (
           <div key={step.key} className="flex flex-col items-center gap-1.5 relative z-10">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm border-2 transition-all
-              ${done ? 'bg-[#FF6B00] border-[#FF6B00] text-white' :
-                active ? 'bg-white border-[#FF6B00] shadow-lg shadow-orange-100' :
+              ${done ? 'bg-[#E8614A] border-[#E8614A] text-white' :
+                active ? 'bg-white border-[#E8614A] shadow-lg shadow-orange-100' :
                 'bg-white border-gray-200 text-gray-300'}`}>
               {done ? '✓' : step.icon}
             </div>
             <div className={`text-xs text-center leading-tight font-medium
-              ${done || active ? 'text-[#FF6B00]' : 'text-gray-300'}`}>
+              ${done || active ? 'text-[#E8614A]' : 'text-gray-300'}`}>
               {step.label}
             </div>
           </div>
@@ -66,12 +66,12 @@ export default function PublicTrackPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] to-[#0F3460]">
+    <div className="min-h-screen bg-gradient-to-br from-[#F5F0EA] to-[#EDE8E0]">
       {/* Header */}
       <div className="px-4 py-6 text-center">
-        <div className="text-[#FF6B00] text-sm font-bold tracking-widest mb-2">皇祥工程設計</div>
-        <h1 className="text-white text-2xl font-bold">案件進度查詢</h1>
-        <p className="text-gray-400 text-sm mt-1">輸入案件編號即可查詢即時進度</p>
+        <div className="text-[#E8614A] text-sm font-bold tracking-widest mb-2">Pro080</div>
+        <h1 className="text-[#1A1A1A] text-2xl font-bold">案件進度查詢</h1>
+        <p className="text-gray-500 text-sm mt-1">輸入案件編號即可查詢即時進度</p>
       </div>
 
       <div className="px-4 pb-8 max-w-lg mx-auto">
@@ -81,12 +81,12 @@ export default function PublicTrackPage() {
             <input
               value={inputCaseNumber}
               onChange={e => setInputCaseNumber(e.target.value.toUpperCase())}
-              className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-400 outline-none focus:border-[#FF6B00] transition-colors font-mono tracking-wider"
+              className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 outline-none focus:border-[#E8614A] transition-colors font-mono tracking-wider"
               placeholder="WO-2026-0001"
             />
             <button
               type="submit"
-              className="bg-[#FF6B00] text-white px-5 rounded-xl hover:bg-orange-600 transition-colors flex items-center gap-2"
+              className="bg-[#E8614A] text-white px-5 rounded-xl hover:bg-orange-600 transition-colors flex items-center gap-2"
             >
               <Search size={18} />
             </button>
@@ -96,7 +96,7 @@ export default function PublicTrackPage() {
         {/* Loading */}
         {isLoading && (
           <div className="bg-white rounded-2xl p-8 text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-[#FF6B00] border-t-transparent rounded-full mx-auto mb-3" />
+            <div className="animate-spin w-8 h-8 border-2 border-[#E8614A] border-t-transparent rounded-full mx-auto mb-3" />
             <p className="text-gray-500 text-sm">查詢中...</p>
           </div>
         )}
@@ -118,12 +118,12 @@ export default function PublicTrackPage() {
               {/* Card Header */}
               <div className="bg-[#1A1A2E] px-5 py-4">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[#FF6B00] text-xs font-bold">皇祥工程設計</span>
+                  <span className="text-[#E8614A] text-xs font-bold">Pro080</span>
                   <span className="text-gray-400 text-xs">
                     {new Date(caseData.created_at).toLocaleDateString('zh-TW')}
                   </span>
                 </div>
-                <div className="text-white font-mono text-lg font-bold">{caseData.case_number}</div>
+                <div className="text-[#1A1A1A] font-mono text-lg font-bold">{caseData.case_number}</div>
                 <div className="text-gray-300 text-sm mt-0.5 truncate">{caseData.title}</div>
               </div>
 
@@ -170,7 +170,7 @@ export default function PublicTrackPage() {
                   {caseData.activities.map((act, i) => (
                     <div key={i} className="flex gap-3">
                       <div className="flex flex-col items-center">
-                        <div className="w-2 h-2 rounded-full bg-[#FF6B00] mt-1.5 flex-shrink-0" />
+                        <div className="w-2 h-2 rounded-full bg-[#E8614A] mt-1.5 flex-shrink-0" />
                         {i < caseData.activities.length - 1 && (
                           <div className="w-px flex-1 bg-gray-100 mt-1" />
                         )}
@@ -190,7 +190,7 @@ export default function PublicTrackPage() {
             {/* Report Another */}
             <a
               href="/public/report"
-              className="block text-center bg-white/10 border border-white/20 text-white py-3 rounded-xl text-sm hover:bg-white/20 transition-colors"
+              className="block text-center bg-white border border-gray-200 text-gray-700 py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors"
             >
               + 申請新的報修
             </a>

@@ -34,7 +34,7 @@ const calcTotals = (items, taxRate) => {
 
 // ── 科技風 PDF Helper ──────────────────────────────────────────────────────────
 const TECH_COLORS = {
-  primary: '#FF6B00',       // 皇祥工程設計 orange
+  primary: '#E8614A',       // Pro080 coral orange
   dark:    '#1A1A2E',       // deep navy
   accent:  '#16213E',       // dark blue
   mid:     '#0F3460',       // mid blue
@@ -53,24 +53,29 @@ const hexToRgb = (hex) => {
 };
 
 const drawTechHeader = (doc, title, subtitle, number) => {
-  // Dark header band
   doc.save();
-  doc.rect(0, 0, 595, 100).fill(TECH_COLORS.dark);
-  // Orange accent bar
-  doc.rect(0, 95, 595, 5).fill(TECH_COLORS.primary);
-  // Title
+  // 珊瑚橘頁首底色
+  doc.rect(0, 0, 595, 100).fill('#E8614A');
+  doc.rect(0, 95, 595, 5).fill('#1A1A1A');
+  // 裝飾圓
+  doc.circle(520, 20, 55).fillOpacity(0.08).fill('#FFFFFF');
+  // 「修」字圓角方塊 LOGO
+  doc.roundedRect(32, 12, 28, 28, 6).fill('#FFFFFF');
+  doc.fillColor('#E8614A').fontSize(14).font('CJK')
+     .text('修', 32, 16, {width:28, align:'center', lineBreak:false});
+  // 標題（LOGO右側）
   doc.fillColor(TECH_COLORS.white).fontSize(22).font('CJK')
-     .text(title, 40, 22, { width: 360 });
-  // Subtitle
-  doc.fillColor(TECH_COLORS.primary).fontSize(10).font('CJK')
-     .text(subtitle, 40, 52);
+     .text(title, 68, 12, { width: 340 });
+  // 副標題
+  doc.fillColor('rgba(255,255,255,0.75)').fontSize(10).font('CJK')
+     .text(subtitle, 68, 44);
   // Number box
-  doc.roundedRect(430, 18, 130, 50, 4).fill(TECH_COLORS.primary);
+  doc.roundedRect(430, 18, 130, 50, 4).fill('rgba(0,0,0,0.15)');
   doc.fillColor(TECH_COLORS.white).fontSize(8).font('CJK')
      .text('DOCUMENT NO.', 440, 25);
   doc.fontSize(11).text(number, 440, 37, { width: 110 });
   // Date
-  doc.fillColor(TECH_COLORS.gray).fontSize(8)
+  doc.fillColor('rgba(255,255,255,0.7)').fontSize(8)
      .text(`列印日期：${new Date().toLocaleDateString('zh-TW')}`, 440, 54);
   doc.restore();
 };
@@ -187,7 +192,7 @@ const generateQuotationPdfBuffer = async (quotId) => {
 
     if (quot.notes) {
       doc.y += 10;
-      drawSectionHeader(doc, '備注事項');
+      drawSectionHeader(doc, '備註事項');
       doc.save().rect(40, doc.y, 515, 1).fill(TECH_COLORS.light).restore();
       doc.save().rect(40, doc.y, 3, 40).fill(TECH_COLORS.primary).restore();
       doc.fillColor(TECH_COLORS.text).fontSize(9).font('CJK')
@@ -199,7 +204,7 @@ const generateQuotationPdfBuffer = async (quotId) => {
     doc.save();
     doc.rect(0, 800, 595, 42).fill(TECH_COLORS.dark);
     doc.fillColor(TECH_COLORS.gray).fontSize(8)
-       .text('此報價單由 皇祥工程設計 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
+       .text('此報價單由 Pro080 工程報修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
     doc.restore();
 
     doc.end();
@@ -285,7 +290,7 @@ const generateInvoicePdfBuffer = async (invId) => {
 
     if (invoice.notes) {
       doc.y += 8;
-      drawSectionHeader(doc, '備注事項');
+      drawSectionHeader(doc, '備註事項');
       doc.fillColor(TECH_COLORS.text).fontSize(9).font('CJK')
          .text(invoice.notes, 48, doc.y + 4, { width: 507 });
     }
@@ -293,14 +298,14 @@ const generateInvoicePdfBuffer = async (invId) => {
     doc.save();
     doc.rect(0, 800, 595, 42).fill(TECH_COLORS.dark);
     doc.fillColor(TECH_COLORS.gray).fontSize(8)
-       .text('此請款單由 皇祥工程設計 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
+       .text('此請款單由 Pro080 工程報修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
     doc.restore();
 
     doc.end();
   });
 };
 
-// ── 皇祥工程設計 品牌色調 結案報告 PDF ──────────────────────────────────────────────
+// ── Pro080 品牌色調 結案報告 PDF ──────────────────────────────────────────────
 const generateClosureReportPdf = async (caseId, closureData = {}) => {
   const caseResult = await query(`
     SELECT c.*, u.name as engineer_name, u.phone as engineer_phone,
@@ -328,27 +333,29 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    // ─ 皇祥工程設計-branded Header ─────────────────────────────────────
-    // Background gradient simulation
+    // ─ Pro080-branded Header ─────────────────────────────────────
     doc.save();
-    doc.rect(0, 0, 595, 120).fill('#1A1A2E');
-    doc.rect(0, 115, 595, 5).fill('#FF6B00');
-    // Decorative circles
-    doc.circle(520, 20, 60).fillOpacity(0.05).fill('#FF6B00');
-    doc.circle(560, 80, 40).fillOpacity(0.05).fill('#FF6B00');
+    doc.rect(0, 0, 595, 120).fill('#E8614A');
+    doc.rect(0, 115, 595, 5).fill('#1A1A1A');
+    doc.circle(520, 20, 60).fillOpacity(0.08).fill('#FFFFFF');
+    doc.circle(560, 80, 40).fillOpacity(0.08).fill('#FFFFFF');
     doc.restore();
 
     // Logo area & title
     doc.save();
-    doc.fillColor('#FF6B00').fontSize(9).font('CJK').text('皇祥工程設計', 40, 20);
-    doc.fillColor('#FFFFFF').fontSize(20).font('CJK').text('工程結案報告', 40, 35);
-    doc.fillColor('#FF6B00').fontSize(10).font('CJK').text('ENGINEERING CLOSURE REPORT', 40, 62);
+    // 「修」字圓角方塊
+    doc.roundedRect(32, 14, 28, 28, 6).fill('#FFFFFF');
+    doc.fillColor('#E8614A').fontSize(14).font('CJK').text('修', 32, 18, {width:28, align:'center', lineBreak:false});
+    // 品牌文字
+    doc.fillColor('#FFFFFF').fontSize(9).font('CJK').text('Pro080', 68, 20);
+    doc.fillColor('#FFFFFF').fontSize(20).font('CJK').text('工程結案報告', 68, 35);
+    doc.fillColor('rgba(255,255,255,0.7)').fontSize(10).font('CJK').text('ENGINEERING CLOSURE REPORT', 68, 62);
 
     // Case number badge
-    doc.roundedRect(400, 16, 165, 55, 6).stroke('#FF6B00').strokeOpacity(0.8);
-    doc.fillColor('#FF6B00').fontSize(7).font('CJK').text('CASE NUMBER', 412, 25);
+    doc.roundedRect(400, 16, 165, 55, 6).stroke('#FFFFFF').strokeOpacity(0.6);
+    doc.fillColor('#FFFFFF').fontSize(7).font('CJK').text('CASE NUMBER', 412, 25);
     doc.fillColor('#FFFFFF').fontSize(14).font('CJK').text(c.case_number, 412, 38);
-    doc.fillColor('#95A5A6').fontSize(8).font('CJK')
+    doc.fillColor('rgba(255,255,255,0.7)').fontSize(8).font('CJK')
        .text(`結案：${c.signed_at ? new Date(c.signed_at).toLocaleDateString('zh-TW') : '--'}`, 412, 58);
     doc.restore();
     doc.y = 132;
@@ -476,7 +483,7 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     doc.fillColor('#95A5A6').fontSize(8).font('CJK')
        .text('簽收人', 52, sigY + 18)
        .text('簽收時間', 200, sigY + 18)
-       .text('完工備注', 380, sigY + 18);
+       .text('完工備註', 380, sigY + 18);
     doc.fillColor('#2C3E50').font('CJK')
        .text(c.signed_by || '--', 52, sigY + 30)
        .text(c.signed_at ? new Date(c.signed_at).toLocaleString('zh-TW') : '--', 200, sigY + 30)
@@ -501,7 +508,7 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     doc.save();
     doc.rect(0, footerY, 595, 52).fill('#1A1A2E');
     doc.rect(0, footerY, 595, 3).fill('#FF6B00');
-    doc.fillColor('#FF6B00').fontSize(8).font('CJK').text('皇祥工程設計', 40, footerY + 12);
+    doc.fillColor('#E8614A').fontSize(8).font('CJK').text('Pro080', 40, footerY + 12);
     doc.fillColor('#95A5A6').fontSize(7.5).font('CJK')
        .text('維修工程管理系統  ·  本報告由系統自動產生，具備法律效力之簽收記錄', 85, footerY + 14);
     doc.fillColor('#4A4A6A').fontSize(7)
@@ -623,7 +630,7 @@ router.delete('/quotations/:id', authenticate, authorize('admin','customer_servi
 // GET /api/finance/quotations/:id/pdf
 router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   const bw = req.query.bw === '1';
-  const company = req.query.company || '皇祥工程設計';
+  const company = req.query.company || 'Pro080';
   const qr = await query(`
     SELECT qt.*, c.case_number, c.owner_name, c.owner_company, c.owner_phone,
       c.location_address, c.title
@@ -827,7 +834,7 @@ router.get('/stats', authenticate, authorize('admin','customer_service'), asyncH
 
 // GET /api/finance/invoices/:id/pdf
 router.get('/invoices/:id/pdf', authenticate, asyncHandler(async (req, res) => {
-  const company = req.query.company || '皇祥工程設計';
+  const company = req.query.company || 'Pro080';
   const ir = await query(`
     SELECT inv.*, c.case_number, c.owner_name, c.owner_company, c.owner_phone,
       c.location_address, c.signed_by, c.signed_at, c.completion_notes,
@@ -992,7 +999,7 @@ router.get('/closures/by-case/:caseId/pdf', authenticate, asyncHandler(async (re
 
 // GET /api/finance/closures/:id/pdf
 router.get('/closures/:id/pdf', authenticate, asyncHandler(async (req, res) => {
-  const company = req.query.company || '皇祥工程設計';
+  const company = req.query.company || 'Pro080';
   const crr = await query(`
     SELECT cr.*, c.case_number, c.title, c.owner_name, c.owner_company, c.owner_phone,
       c.location_address, c.signed_by, c.signed_at, c.completion_notes,
@@ -1146,7 +1153,7 @@ router.get('/receipts/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   if (!rec.rows.length) return res.status(404).json({ error: '收款單不存在' });
   const receipt = rec.rows[0];
 
-  const company = req.query.company || '皇祥工程設計';
+  const company = req.query.company || 'Pro080';
   await pdf.ensureChineseFont();
   const fontPath = await pdf.ensureChineseFont();
   const doc = pdf.newDoc(fontPath);

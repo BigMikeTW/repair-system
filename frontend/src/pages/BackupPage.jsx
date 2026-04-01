@@ -27,7 +27,7 @@ export default function BackupPage() {
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1 className="page-title">備份與匯出</h1>
+        <h1 className="page-title">備份記錄</h1>
         <button className="btn btn-primary" disabled={createBackup.isLoading} onClick={() => createBackup.mutate()}>
           <Database size={14} /> {createBackup.isLoading ? '備份中...' : '立即備份'}
         </button>
