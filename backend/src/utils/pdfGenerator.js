@@ -183,7 +183,7 @@ function sectionLabel(doc, text) {
 
 // ── 客戶資訊 ─────────────────────────────────────────────────
 function clientBlock(doc, rows) {
-  const c1=62, c2=187, c3=62, c4=190;
+  const c1=62, c2=206, c3=62, c4=206;
   const PAD_X=8, PAD_Y=5, MIN_RH=20;
   let y = doc.y;
 
@@ -259,7 +259,7 @@ function notesBlock(doc, text) {
 
 // ── Sign-off ─────────────────────────────────────────────────
 function signoff(doc, data) {
-  const c1=62, c2=187, c3=62, c4=190;
+  const c1=62, c2=206, c3=62, c4=206;
   const PAD = 7; // 內距
   const FONT_LBL = 8; const FONT_VAL = 9.5; const FONT_BIG = 11;
 

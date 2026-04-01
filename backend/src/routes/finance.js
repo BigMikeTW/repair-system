@@ -138,12 +138,12 @@ const generateQuotationPdfBuffer = async (quotId) => {
     doc.save();
     doc.rect(40, tY, 515, 22).fill(TECH_COLORS.dark);
     doc.fillColor(TECH_COLORS.white).fontSize(9).font('CJK');
-    doc.text('項目名稱', 48, tY + 7, { width: 160 });
-    doc.text('說明', 215, tY + 7, { width: 100 });
-    doc.text('數量', 320, tY + 7, { width: 40, align: 'center' });
-    doc.text('單位', 365, tY + 7, { width: 40, align: 'center' });
-    doc.text('單價', 410, tY + 7, { width: 65, align: 'right' });
-    doc.text('小計', 480, tY + 7, { width: 70, align: 'right' });
+    doc.text('項目名稱', 48, tY + 7, { width: 165 });
+    doc.text('說明',    213, tY + 7, { width: 130 });
+    doc.text('數量',    343, tY + 7, { width: 42,  align: 'center' });
+    doc.text('單位',    385, tY + 7, { width: 40,  align: 'center' });
+    doc.text('單價',    425, tY + 7, { width: 72,  align: 'right'  });
+    doc.text('小計',    497, tY + 7, { width: 50,  align: 'right'  });
     doc.restore();
     doc.y = tY + 22;
 
@@ -154,13 +154,13 @@ const generateQuotationPdfBuffer = async (quotId) => {
       }
       doc.save();
       doc.fillColor(TECH_COLORS.text).fontSize(8).font('CJK');
-      doc.text(item.item_name || '', 48, rowY + 6, { width: 160 });
-      doc.text(item.description || '', 215, rowY + 6, { width: 100 });
-      doc.text(String(item.quantity), 320, rowY + 6, { width: 40, align: 'center' });
-      doc.text(item.unit || '', 365, rowY + 6, { width: 40, align: 'center' });
-      doc.text(`$${Number(item.unit_price).toLocaleString()}`, 410, rowY + 6, { width: 65, align: 'right' });
+      doc.text(item.item_name || '', 48,  rowY + 6, { width: 165 });
+      doc.text(item.description || '', 213, rowY + 6, { width: 130 });
+      doc.text(String(item.quantity),   343, rowY + 6, { width: 42,  align: 'center' });
+      doc.text(item.unit || '',         385, rowY + 6, { width: 40,  align: 'center' });
+      doc.text(`$${Number(item.unit_price).toLocaleString()}`, 425, rowY + 6, { width: 72, align: 'right' });
       doc.fillColor(TECH_COLORS.dark).font('CJK')
-         .text(`$${Number(item.subtotal).toLocaleString()}`, 480, rowY + 6, { width: 70, align: 'right' });
+         .text(`$${Number(item.subtotal).toLocaleString()}`, 497, rowY + 6, { width: 50, align: 'right' });
       doc.restore();
       doc.y = rowY + 20;
     });
@@ -245,8 +245,8 @@ const generateInvoicePdfBuffer = async (invId) => {
     doc.save();
     doc.rect(40, tY, 515, 22).fill(TECH_COLORS.dark);
     doc.fillColor(TECH_COLORS.white).fontSize(9).font('CJK');
-    doc.text('項目', 48, tY + 7, { width: 300 });
-    doc.text('金額', 460, tY + 7, { width: 90, align: 'right' });
+    doc.text('項目', 48,  tY + 7, { width: 387 });
+    doc.text('金額', 435, tY + 7, { width: 80, align: 'right' });
     doc.restore();
     doc.y = tY + 22;
 
@@ -257,8 +257,8 @@ const generateInvoicePdfBuffer = async (invId) => {
     rows.forEach(([label, val], i) => {
       const rowY = doc.y;
       if (i % 2 === 0) doc.save().rect(40, rowY, 515, 20).fill('#F8FAFC').restore();
-      doc.fillColor(TECH_COLORS.text).fontSize(9).font('CJK').text(label, 48, rowY + 6, { width: 300 });
-      doc.font('CJK').text(val, 460, rowY + 6, { width: 90 });
+      doc.fillColor(TECH_COLORS.text).fontSize(9).font('CJK').text(label, 48, rowY + 6, { width: 387 });
+      doc.font('CJK').text(val, 435, rowY + 6, { width: 80, align: 'right' });
       doc.y = rowY + 20;
     });
 
@@ -657,7 +657,7 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   pdf.sectionLabel(doc, 'QUOTATION DETAILS');
 
   // 表頭
-  const cw=[142,124,42,39,74,62];
+  const cw=[148,120,40,38,82,108];  // 單價可容納$1,000,000，小計可容納$1,000,000,000
   const ths=['項  目  名  稱','說  明','數量','單位','單  價','小  計'];
   let ty=doc.y;
   cw.forEach((w,i)=>{
