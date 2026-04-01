@@ -22,24 +22,39 @@ export default function LiffReportPage() {
 
   // 初始化 LIFF
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js';
-    script.onload = async () => {
+    const initLiff = async () => {
       try {
+        // 動態載入 LIFF SDK
+        await new Promise((resolve, reject) => {
+          if (window.liff) { resolve(); return; }
+          const script = document.createElement('script');
+          script.src = 'https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+
         await window.liff.init({ liffId: LIFF_ID });
+
         if (window.liff.isLoggedIn()) {
           const profile = await window.liff.getProfile();
           setLineUser(profile);
           setForm(f => ({ ...f, owner_name: profile.displayName }));
         } else {
-          window.liff.login();
+          // 在 LINE 內建瀏覽器中自動登入
+          if (window.liff.isInClient()) {
+            window.liff.login();
+          }
+          // 一般瀏覽器中不強制登入，讓用戶手動填寫
         }
       } catch (e) {
         console.error('LIFF init error:', e);
+        // LIFF 初始化失敗時仍可繼續使用（不強制 LINE 登入）
       }
       setLiffReady(true);
     };
-    document.head.appendChild(script);
+
+    initLiff();
 
     // 取得案件類型
     api.get('/case-types').then(r => setCaseTypes(r.data || [])).catch(() => {});

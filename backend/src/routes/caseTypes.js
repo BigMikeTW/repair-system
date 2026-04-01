@@ -3,8 +3,8 @@ const { query } = require('../../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 
-// GET /api/case-types - 取得所有案件類型（所有人可用）
-router.get('/', authenticate, asyncHandler(async (req, res) => {
+// GET /api/case-types - 取得所有案件類型（公開，報修填單需要）
+router.get('/', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT * FROM case_types WHERE is_active = true ORDER BY sort_order, name`
   );
