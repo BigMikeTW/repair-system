@@ -242,12 +242,20 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
 
 // POST /api/cases
 router.post('/', authenticate, asyncHandler(async (req, res) => {
-  const { title, description, case_type, urgency, location_address, location_lat, location_lng,
+  let { title, description, case_type, urgency, location_address, location_lat, location_lng,
     owner_name, owner_phone, owner_company, scheduled_start, scheduled_end } = req.body;
 
   if (!title || !description || !case_type || !location_address) {
     return res.status(400).json({ error: '標題、說明、類型、地址為必填' });
   }
+
+  // ── 欄位長度保護（超出自動截斷，不讓 DB 報錯）────────────────
+  title          = String(title).trim().slice(0, 200);
+  description    = String(description).trim();
+  location_address = String(location_address).trim();
+  owner_name     = String(owner_name || req.user.name || '').trim().slice(0, 100);
+  owner_phone    = String(owner_phone || req.user.phone || '').trim().slice(0, 20);
+  owner_company  = owner_company ? String(owner_company).trim().slice(0, 200) : null;
 
   const caseNumber = await generateCaseNumber();
   const ownerId = req.user.role === 'owner' ? req.user.id : null;
@@ -258,7 +266,7 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *
   `, [caseNumber, title, description, case_type, urgency || 'normal', location_address,
       location_lat || null, location_lng || null, ownerId,
-      owner_name || req.user.name, owner_phone || req.user.phone, owner_company || null,
+      owner_name, owner_phone, owner_company,
       scheduled_start || null, scheduled_end || null]);
 
   const newCase = result.rows[0];
@@ -469,7 +477,15 @@ router.post('/:id/sign', authenticate, asyncHandler(async (req, res) => {
 
 // PUT /api/cases/:id
 router.put('/:id', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
-  const { title, description, case_type, urgency, location_address, owner_name, owner_phone, owner_company } = req.body;
+  let { title, description, case_type, urgency, location_address, owner_name, owner_phone, owner_company } = req.body;
+
+  // ── 欄位長度保護 ──────────────────────────────────────────────
+  title          = title ? String(title).trim().slice(0, 200) : title;
+  description    = description ? String(description).trim() : description;
+  location_address = location_address ? String(location_address).trim() : location_address;
+  owner_name     = owner_name ? String(owner_name).trim().slice(0, 100) : owner_name;
+  owner_phone    = owner_phone ? String(owner_phone).trim().slice(0, 20) : owner_phone;
+  owner_company  = owner_company ? String(owner_company).trim().slice(0, 200) : owner_company;
   const result = await query(`
     UPDATE cases SET title=$1, description=$2, case_type=$3, urgency=$4,
       location_address=$5, owner_name=$6, owner_phone=$7, owner_company=$8

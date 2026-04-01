@@ -562,10 +562,14 @@ router.post('/quotations', authenticate, authorize('admin','customer_service','e
   for (let idx = 0; idx < items.length; idx++) {
     const item = items[idx];
     const st = (parseFloat(item.unit_price) * parseFloat(item.quantity)).toFixed(2);
+    // ── 欄位長度保護 ──────────────────────────────────────────────
+    const itemName = String(item.item_name || '').trim().slice(0, 200);
+    const itemDesc = String(item.description || '').trim().slice(0, 500);
+    const itemUnit = String(item.unit || '').trim().slice(0, 20);
     await query(`
       INSERT INTO quotation_items (quotation_id, item_name, description, quantity, unit, unit_price, subtotal, sort_order)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-    `, [quotation.id, item.item_name, item.description || '', item.quantity, item.unit || '', item.unit_price, st, idx]);
+    `, [quotation.id, itemName, itemDesc, item.quantity, itemUnit, item.unit_price, st, idx]);
   }
 
   res.status(201).json({ ...quotation, items });
@@ -687,35 +691,36 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   // 合計區
   const taxRate=parseFloat(q.tax_rate||5);
   const sub=parseFloat(q.subtotal||0), tax=parseFloat(q.tax_amount||0), tot=parseFloat(q.total||0);
+  const RX = pdf.W - pdf.RM; // 右邊界 x
 
   doc.y += 4;
   // 小計列
   const row1Y = doc.y;
-  doc.rect(pdf.LM, row1Y, pdf.CW, 18).fill(pdf.C.row);
+  doc.rect(pdf.LM, row1Y, pdf.CW, 20).fill(pdf.C.row);
   doc.font('CJK').fontSize(8.5).fillColor(pdf.C.sub)
-     .text('小計 SUBTOTAL', pdf.LM+8, row1Y+5, {width:pdf.CW*0.6, lineBreak:false});
+     .text('小計 SUBTOTAL', pdf.LM+8, row1Y+6, {lineBreak:false});
   doc.font('CJK').fontSize(9.5).fillColor(pdf.C.mid)
-     .text(pdf.money(sub), pdf.LM+8, row1Y+4, {width:pdf.CW-16, align:'right', lineBreak:false});
-  doc.rect(pdf.LM, row1Y+17.6, pdf.CW, 0.4).fill(pdf.C.border);
+     .text(pdf.money(sub), pdf.LM+8, row1Y+5, {width:pdf.CW-16, align:'right', lineBreak:false});
+  doc.rect(pdf.LM, row1Y+19.6, pdf.CW, 0.4).fill(pdf.C.border);
 
   // 稅金列
-  const row2Y = row1Y + 18;
-  doc.rect(pdf.LM, row2Y, pdf.CW, 18).fill(pdf.C.white);
+  const row2Y = row1Y + 20;
+  doc.rect(pdf.LM, row2Y, pdf.CW, 20).fill(pdf.C.white);
   doc.font('CJK').fontSize(8.5).fillColor(pdf.C.sub)
-     .text(`稅金 TAX (${taxRate}%)`, pdf.LM+8, row2Y+5, {width:pdf.CW*0.6, lineBreak:false});
+     .text(`稅金 TAX (${taxRate}%)`, pdf.LM+8, row2Y+6, {lineBreak:false});
   doc.font('CJK').fontSize(9.5).fillColor(pdf.C.mid)
-     .text(pdf.money(tax), pdf.LM+8, row2Y+4, {width:pdf.CW-16, align:'right', lineBreak:false});
-  doc.rect(pdf.LM, row2Y+17.6, pdf.CW, 0.4).fill(pdf.C.border);
+     .text(pdf.money(tax), pdf.LM+8, row2Y+5, {width:pdf.CW-16, align:'right', lineBreak:false});
+  doc.rect(pdf.LM, row2Y+19.6, pdf.CW, 0.4).fill(pdf.C.border);
 
   // 總計框
-  const totY = row2Y + 18 + 2;
-  doc.rect(pdf.LM, totY, pdf.CW, 28).fillAndStroke(pdf.C.label, pdf.C.acc);
-  doc.rect(pdf.LM, totY, pdf.CW-1, 1.5).fill(pdf.C.acc);
+  const totY = row2Y + 20 + 3;
+  doc.rect(pdf.LM, totY, pdf.CW, 30).fillAndStroke(pdf.C.label, pdf.C.acc);
+  doc.rect(pdf.LM, totY, pdf.CW-1, 2).fill(pdf.C.acc);
   doc.font('CJK').fontSize(11).fillColor(pdf.C.dark)
-     .text('報價總金額 TOTAL', pdf.LM+12, totY+8, {width:pdf.CW*0.5, lineBreak:false});
-  doc.font('CJK').fontSize(15).fillColor(pdf.C.acc)
-     .text(pdf.money(tot), pdf.LM+8, totY+6, {width:pdf.CW-16, align:'right', lineBreak:false});
-  doc.y = totY + 34;
+     .text('報價總金額 TOTAL', pdf.LM+12, totY+9, {lineBreak:false});
+  doc.font('CJK').fontSize(16).fillColor(pdf.C.acc)
+     .text(pdf.money(tot), pdf.LM+8, totY+7, {width:pdf.CW-16, align:'right', lineBreak:false});
+  doc.y = totY + 36;
 
   if (q.notes) { pdf.notesBlock(doc, q.notes); }
 
