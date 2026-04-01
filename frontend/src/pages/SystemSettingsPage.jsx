@@ -631,6 +631,13 @@ function CompanyHeaderSettings() {
     reader.readAsDataURL(file);
   };
 
+  const setDefault = (idx) => {
+    const updated = headers.map((h, i) => ({ ...h, isDefault: i === idx }));
+    saveHeaders(updated);
+    setHeaders(updated);
+    toast.success('已設定為預設公司');
+  };
+
   const save = () => {
     if (!fd.name_zh?.trim()) return toast.error('請輸入公司中文全名');
     const header = { id: form.idx !== undefined ? headers[form.idx].id : Date.now(), ...fd };
@@ -638,6 +645,8 @@ function CompanyHeaderSettings() {
     if (form.idx !== undefined) {
       updated = headers.map((h, i) => i === form.idx ? header : h);
     } else {
+      // 若是第一筆，自動設為預設
+      header.isDefault = headers.length === 0;
       updated = [...headers, header];
     }
     saveHeaders(updated);
@@ -678,7 +687,11 @@ function CompanyHeaderSettings() {
                 {h.abbr_zh && <div className="text-xs text-gray-400">縮寫：{h.abbr_zh}{h.abbr_en ? ` / ${h.abbr_en}` : ''}</div>}
               </div>
             </div>
-            <div className="flex gap-1">
+            <div className="flex items-center gap-2">
+              {h.isDefault
+                ? <span className="badge badge-success text-xs">預設</span>
+                : <button className="btn btn-sm text-xs" onClick={() => setDefault(idx)}>設為預設</button>
+              }
               <button className="btn btn-sm" onClick={() => openEdit(h, idx)}><Edit2 size={12} /></button>
               <button className="btn btn-sm text-danger border-red-200" onClick={() => remove(idx)}><Trash2 size={12} /></button>
             </div>

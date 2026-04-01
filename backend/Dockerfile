@@ -2,7 +2,12 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache postgresql-client
+# 安裝 PostgreSQL client 及中文字型（WQY Zen Hei）
+RUN apk add --no-cache postgresql-client fontconfig font-wqy-zenhei
+
+# 建立字型快取並複製到 /tmp 方便存取
+RUN fc-cache -fv && \
+    find /usr/share/fonts -name "*.ttf" -o -name "*.otf" | head -5
 
 COPY package*.json ./
 RUN npm ci --only=production

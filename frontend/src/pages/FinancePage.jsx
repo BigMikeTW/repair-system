@@ -30,10 +30,13 @@ const getCustomRemarks = (module) => {
 
 // ── PDF 下載視窗 ──────────────────────────────────────────────
 function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
-  const [selectedCompany, setSelectedCompany] = useState('皇祥工程設計');
-  const [selectedRemarks, setSelectedRemarks] = useState([]);
   const headers = getCompanyHeaders();
   const remarks = getCustomRemarks(module);
+  const defaultHeader = headers.find(h => h.isDefault);
+  const [selectedCompany, setSelectedCompany] = useState(
+    defaultHeader?.name_zh || '皇祥工程設計'
+  );
+  const [selectedRemarks, setSelectedRemarks] = useState([]);
 
   const handleDownload = () => {
     let url = pdfUrl;
@@ -56,9 +59,11 @@ function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
             <label className="form-label">公司名稱（左上角）</label>
             <select className="form-select" value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)}>
               <option value="" disabled>請選擇公司</option>
-              <option value="皇祥工程設計">皇祥工程設計（預設）</option>
+              <option value="皇祥工程設計">皇祥工程設計（系統預設）</option>
               {headers.map((h, i) => (
-                <option key={i} value={h.name_zh}>{h.name_zh}</option>
+                <option key={i} value={h.name_zh}>
+                  {h.name_zh}{h.isDefault ? '（預設）' : ''}
+                </option>
               ))}
             </select>
           </div>

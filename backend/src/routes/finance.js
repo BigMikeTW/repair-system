@@ -627,7 +627,8 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   const items = await query(`SELECT * FROM quotation_items WHERE quotation_id=$1 ORDER BY sort_order`, [req.params.id]);
 
   await pdf.ensureChineseFont();
-  const doc = pdf.newDoc(require('/tmp/WQY.ttf') ? null : null);
+  const fontPath = await pdf.ensureChineseFont();
+  const doc = pdf.newDoc(fontPath);
   const chunks = [];
   doc.on('data', c => chunks.push(c));
 
@@ -811,7 +812,8 @@ router.get('/invoices/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   const inv = ir.rows[0];
 
   await pdf.ensureChineseFont();
-  const doc = pdf.newDoc(null);
+  const fontPath = await pdf.ensureChineseFont();
+  const doc = pdf.newDoc(fontPath);
   const chunks = [];
   doc.on('data', c => chunks.push(c));
 
@@ -981,7 +983,8 @@ router.get('/closures/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   `, [cr.case_id]);
 
   await pdf.ensureChineseFont();
-  const doc = pdf.newDoc(null);
+  const fontPath = await pdf.ensureChineseFont();
+  const doc = pdf.newDoc(fontPath);
   const chunks = [];
   doc.on('data', c => chunks.push(c));
 

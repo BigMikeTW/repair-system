@@ -8,52 +8,50 @@ const PDFDocument = require('pdfkit');
 const fs   = require('fs');
 const path = require('path');
 
-// ── 字型設定 ──────────────────────────────────────────────────
+// ── 字型設定（Alpine Linux + font-wqy-zenhei）────────────────
 const FONT_PATHS = [
-  '/tmp/WQY.ttf',
+  // Alpine apk font-wqy-zenhei 安裝路徑
+  '/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc',
+  '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
   '/usr/share/fonts/truetype/wqy/wqy-microhei.ttf',
-  path.join(__dirname, '../../../fonts/NotoSansTC-Regular.ttf'),
+  // 備用路徑
+  '/usr/share/fonts/wqy/wqy-zenhei.ttc',
+  '/tmp/WQY.ttf',
 ];
 
 let FONT_REGULAR = null;
 for (const fp of FONT_PATHS) {
-  if (fs.existsSync(fp)) { FONT_REGULAR = fp; break; }
+  if (fs.existsSync(fp)) {
+    FONT_REGULAR = fp;
+    console.log('[PDF] Using font:', fp);
+    break;
+  }
+}
+if (!FONT_REGULAR) {
+  console.warn('[PDF] No CJK font found, PDF will use Helvetica (no Chinese)');
 }
 
-// 確保中文字型可用（Railway 系統已預裝 WQY）
+// 確保中文字型可用
 async function ensureChineseFont() {
   if (FONT_REGULAR) return FONT_REGULAR;
 
-  // Railway 系統字型路徑列表
   const tryPaths = [
-    '/tmp/WQY.ttf',
+    '/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc',
     '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
     '/usr/share/fonts/truetype/wqy/wqy-microhei.ttf',
-    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
-    '/usr/share/fonts/noto-cjk/NotoSansCJKtc-Regular.otf',
+    '/usr/share/fonts/wqy/wqy-zenhei.ttc',
+    '/tmp/WQY.ttf',
   ];
 
   for (const fp of tryPaths) {
     if (fs.existsSync(fp)) {
       FONT_REGULAR = fp;
-      console.log('Found CJK font:', fp);
+      console.log('[PDF] Found font at runtime:', fp);
       return fp;
     }
   }
 
-  // 嘗試安裝字型
-  try {
-    const { execSync } = require('child_process');
-    execSync('apt-get install -y fonts-wqy-zenhei 2>/dev/null || true');
-    const installed = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc';
-    if (fs.existsSync(installed)) {
-      FONT_REGULAR = installed;
-      return installed;
-    }
-  } catch (e) {}
-
-  console.warn('No CJK font found, using Helvetica fallback');
-  FONT_REGULAR = null;
+  console.warn('[PDF] No CJK font found');
   return null;
 }
 
