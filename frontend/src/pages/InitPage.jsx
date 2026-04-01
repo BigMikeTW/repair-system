@@ -95,11 +95,7 @@ export default function InitPage() {
             <Lock size={20} className="text-primary" />
             <h2 className="text-lg font-semibold">輸入今日授權密碼</h2>
           </div>
-          <div className="bg-gray-50 rounded-xl p-4 mb-4">
-            <p className="text-sm text-gray-600 mb-1">授權密碼每日不同，計算公式：</p>
-            <code className="text-sm font-mono text-primary">年份後2碼 × 月份² + 日期³，不足6位前補0</code>
-            <p className="text-xs text-gray-400 mt-2">例：2026年4月15日 → 26 × 16 + 3375 = 3791 → <strong>003791</strong></p>
-          </div>
+
           <div className="flex gap-3">
             <input
               type="password"

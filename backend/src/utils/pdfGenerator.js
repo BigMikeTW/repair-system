@@ -20,31 +20,41 @@ for (const fp of FONT_PATHS) {
   if (fs.existsSync(fp)) { FONT_REGULAR = fp; break; }
 }
 
-// 若找不到中文字型則動態下載
+// 確保中文字型可用（Railway 系統已預裝 WQY）
 async function ensureChineseFont() {
   if (FONT_REGULAR) return FONT_REGULAR;
-  const dest = '/tmp/WQY.ttf';
-  if (fs.existsSync(dest)) { FONT_REGULAR = dest; return dest; }
 
-  console.log('Downloading CJK font...');
-  return new Promise((resolve) => {
-    const https = require('https');
-    const url = 'https://github.com/mcpierce/wqy-fonts/raw/main/wqy-zenhei.ttf';
-    const file = fs.createWriteStream(dest);
-    https.get(url, res => {
-      res.pipe(file);
-      file.on('finish', () => {
-        file.close();
-        FONT_REGULAR = dest;
-        console.log('CJK font downloaded');
-        resolve(dest);
-      });
-    }).on('error', (e) => {
-      console.error('Font download failed:', e.message);
-      FONT_REGULAR = null;
-      resolve(null);
-    });
-  });
+  // Railway 系統字型路徑列表
+  const tryPaths = [
+    '/tmp/WQY.ttf',
+    '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
+    '/usr/share/fonts/truetype/wqy/wqy-microhei.ttf',
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    '/usr/share/fonts/noto-cjk/NotoSansCJKtc-Regular.otf',
+  ];
+
+  for (const fp of tryPaths) {
+    if (fs.existsSync(fp)) {
+      FONT_REGULAR = fp;
+      console.log('Found CJK font:', fp);
+      return fp;
+    }
+  }
+
+  // 嘗試安裝字型
+  try {
+    const { execSync } = require('child_process');
+    execSync('apt-get install -y fonts-wqy-zenhei 2>/dev/null || true');
+    const installed = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc';
+    if (fs.existsSync(installed)) {
+      FONT_REGULAR = installed;
+      return installed;
+    }
+  } catch (e) {}
+
+  console.warn('No CJK font found, using Helvetica fallback');
+  FONT_REGULAR = null;
+  return null;
 }
 
 // ── 色盤 ─────────────────────────────────────────────────────

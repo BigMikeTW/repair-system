@@ -55,6 +55,7 @@ function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
           <div>
             <label className="form-label">公司名稱（左上角）</label>
             <select className="form-select" value={selectedCompany} onChange={e => setSelectedCompany(e.target.value)}>
+              <option value="" disabled>請選擇公司</option>
               <option value="皇祥工程設計">皇祥工程設計（預設）</option>
               {headers.map((h, i) => (
                 <option key={i} value={h.name_zh}>{h.name_zh}</option>
@@ -97,9 +98,38 @@ function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
 
 // ── 報價單表單 ────────────────────────────────────────────────
 function QuotationForm({ onClose, onSuccess, editData }) {
+  const [initialized, setInitialized] = React.useState(!editData);
+  const [loadedItems, setLoadedItems] = React.useState(null);
+
+  React.useEffect(() => {
+    if (editData?.id) {
+      financeAPI.getQuotation(editData.id).then(r => {
+        setLoadedItems(r.data?.items || []);
+        setInitialized(true);
+      }).catch(() => {
+        setLoadedItems([]);
+        setInitialized(true);
+      });
+    }
+  }, [editData?.id]);
+
+  const defaultItems = loadedItems || (editData?.items) || [{ item_name: '', description: '', quantity: 1, unit: '', unit_price: 0 }];
+
   const { register, control, handleSubmit, watch, formState: { isSubmitting } } = useForm({
-    defaultValues: editData || { tax_rate: TAX_RATE, items: [{ item_name: '', description: '', quantity: 1, unit: '', unit_price: 0 }] }
+    defaultValues: editData
+      ? { ...editData, items: defaultItems }
+      : { tax_rate: TAX_RATE, items: [{ item_name: '', description: '', quantity: 1, unit: '', unit_price: 0 }] }
   });
+
+  if (editData && !initialized) {
+    return (
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 text-center">
+          <div className="text-gray-500">載入中...</div>
+        </div>
+      </div>
+    );
+  }
   const { fields, append, remove } = useFieldArray({ control, name: 'items' });
   const watchItems = watch('items');
   const subtotal = watchItems.reduce((s, i) => s + (parseFloat(i.unit_price)||0)*(parseFloat(i.quantity)||0), 0);

@@ -404,6 +404,24 @@ function CaseNotesSection({ caseId, isSigned, isLocked }) {
     finally { setSubmitting(false); }
   };
 
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState('');
+
+  const handleEdit = (note) => {
+    setEditingId(note.id);
+    setEditText(note.content);
+  };
+
+  const handleEditSave = async (noteId) => {
+    if (!editText.trim()) return;
+    try {
+      await casesAPI.updateNote(caseId, noteId, { content: editText.trim() });
+      setEditingId(null);
+      refetch();
+      toast.success('備注已更新');
+    } catch { toast.error('更新失敗'); }
+  };
+
   const handleDelete = async (noteId) => {
     if (!window.confirm('確定刪除此備注？')) return;
     try {
@@ -456,12 +474,36 @@ function CaseNotesSection({ caseId, isSigned, isLocked }) {
                     <span>·</span>
                     <span>{new Date(note.created_at).toLocaleString('zh-TW')}</span>
                   </div>
-                  <div className="text-base text-gray-800 whitespace-pre-wrap">{note.content}</div>
+                  {editingId === note.id ? (
+                    <textarea
+                      value={editText}
+                      onChange={e => setEditText(e.target.value)}
+                      className="form-textarea text-base w-full mt-1"
+                      rows={3}
+                      autoFocus
+                    />
+                  ) : (
+                    <div className="text-base text-gray-800 whitespace-pre-wrap">{note.content}</div>
+                  )}
                 </div>
                 {!isLocked && (
-                  <button className="text-gray-300 hover:text-danger flex-shrink-0" onClick={() => handleDelete(note.id)}>
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex gap-1 flex-shrink-0">
+                    {editingId === note.id ? (
+                      <>
+                        <button className="btn btn-sm btn-primary text-xs" onClick={() => handleEditSave(note.id)}>儲存</button>
+                        <button className="btn btn-sm text-xs" onClick={() => setEditingId(null)}>取消</button>
+                      </>
+                    ) : (
+                      <>
+                        <button className="text-gray-300 hover:text-primary" onClick={() => handleEdit(note)}>
+                          <Edit2 size={13} />
+                        </button>
+                        <button className="text-gray-300 hover:text-danger" onClick={() => handleDelete(note.id)}>
+                          <Trash2 size={13} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             ))}

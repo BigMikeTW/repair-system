@@ -5,7 +5,7 @@
 ALTER TABLE closure_reports ADD COLUMN IF NOT EXISTS is_cancelled BOOLEAN DEFAULT FALSE;
 ALTER TABLE closure_reports ADD COLUMN IF NOT EXISTS cancel_reason TEXT;
 ALTER TABLE closure_reports ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ;
-ALTER TABLE closure_reports ADD COLUMN IF NOT EXISTS cancelled_by INTEGER;
+ALTER TABLE closure_reports ADD COLUMN IF NOT EXISTS cancelled_by TEXT;
 ALTER TABLE closure_reports ADD COLUMN IF NOT EXISTS cancelled_by_name TEXT;
 
 -- Add quotation_status sync to invoices

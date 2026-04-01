@@ -933,12 +933,13 @@ router.put('/closures/:id', authenticate, authorize('admin','customer_service'),
 router.put('/closures/:id/cancel', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
   const { cancel_reason } = req.body;
   if (!cancel_reason?.trim()) return res.status(400).json({ error: '取消原因為必填' });
-  const userRes = await query('SELECT name FROM users WHERE id=$1', [req.user.id]);
+  const userRes = await query('SELECT id, name FROM users WHERE id=$1', [req.user.id]);
+  const userName = userRes.rows[0]?.name || '—';
   const result = await query(`
     UPDATE closure_reports
-    SET is_cancelled=true, cancel_reason=$1, cancelled_at=NOW(), cancelled_by=$2, cancelled_by_name=$3
-    WHERE id=$4 RETURNING *
-  `, [cancel_reason, req.user.id, userRes.rows[0]?.name||'—', req.params.id]);
+    SET is_cancelled=true, cancel_reason=$1, cancelled_at=NOW(), cancelled_by_name=$2
+    WHERE id=$3 RETURNING *
+  `, [cancel_reason, userName, req.params.id]);
   if (!result.rows.length) return res.status(404).json({ error: '結案單不存在' });
   // 同步更新案件狀態回「已完成」
   await query(`UPDATE cases SET status='completed' WHERE id=$1`, [result.rows[0].case_id]);

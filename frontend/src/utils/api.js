@@ -52,6 +52,7 @@ export const casesAPI = {
   // Notes
   getNotes: (caseId) => api.get(`/case-notes/${caseId}`),
   addNote: (caseId, data) => api.post(`/case-notes/${caseId}`, data),
+  updateNote: (caseId, noteId, data) => api.put(`/case-notes/${caseId}/${noteId}`, data),
   deleteNote: (caseId, noteId) => api.delete(`/case-notes/${caseId}/${noteId}`),
   list: (params) => api.get('/cases', { params }),
   get: (id) => api.get(`/cases/${id}`),
