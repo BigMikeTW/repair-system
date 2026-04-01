@@ -156,11 +156,11 @@ const generateQuotationPdfBuffer = async (quotId) => {
       doc.fillColor(TECH_COLORS.text).fontSize(8).font('CJK');
       doc.text(item.item_name || '', 48, rowY + 6, { width: 160 });
       doc.text(item.description || '', 215, rowY + 6, { width: 100 });
-      doc.text(String(item.quantity), 320, rowY + 6, { width: 40 });
-      doc.text(item.unit || '', 365, rowY + 6, { width: 40 });
-      doc.text(`$${Number(item.unit_price).toLocaleString()}`, 410, rowY + 6, { width: 65 });
+      doc.text(String(item.quantity), 320, rowY + 6, { width: 40, align: 'center' });
+      doc.text(item.unit || '', 365, rowY + 6, { width: 40, align: 'center' });
+      doc.text(`$${Number(item.unit_price).toLocaleString()}`, 410, rowY + 6, { width: 65, align: 'right' });
       doc.fillColor(TECH_COLORS.dark).font('CJK')
-         .text(`$${Number(item.subtotal).toLocaleString()}`, 480, rowY + 6, { width: 70 });
+         .text(`$${Number(item.subtotal).toLocaleString()}`, 480, rowY + 6, { width: 70, align: 'right' });
       doc.restore();
       doc.y = rowY + 20;
     });
@@ -662,8 +662,9 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   let ty=doc.y;
   cw.forEach((w,i)=>{
     doc.rect(pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0),ty,w,18).fill(pdf.C.dark);
+    const align = i>=4 ? 'right' : i>=2 ? 'center' : 'left';
     doc.font('CJK').fontSize(8.5).fillColor(pdf.C.sub)
-       .text(ths[i],pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0)+5,ty+5,{width:w-8,lineBreak:false,align:i>=2?'center':'left'});
+       .text(ths[i],pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0)+4,ty+5,{width:w-8,lineBreak:false,align});
   });
   doc.rect(pdf.LM,ty,pdf.CW,18).stroke(pdf.C.border);
   doc.y=ty+18;
@@ -681,9 +682,11 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
     doc.rect(pdf.LM,ry,pdf.CW,rh).fill(idx%2===0?pdf.C.row:pdf.C.white);
     cw.forEach((w,i)=>{
       const x=pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0);
+      // i=0:項目名稱 left, i=1:說明 left, i=2:數量 center, i=3:單位 center, i=4:單價 right, i=5:小計 right
+      const align = i>=4 ? 'right' : i>=2 ? 'center' : 'left';
       doc.font('CJK').fontSize(i===0?10:9)
-         .fillColor(pdf.C.dark)
-         .text(row[i]||'',x+5,ry+5,{width:w-8,lineBreak:i<2,align:i>=2?'center':'left'});
+         .fillColor(i===5?pdf.C.acc:pdf.C.dark)
+         .text(row[i]||'',x+4,ry+5,{width:w-8,lineBreak:i<2,align});
     });
     doc.rect(pdf.LM,ry+rh-0.3,pdf.CW,0.3).fill(pdf.C.border);
     doc.y=ry+rh;

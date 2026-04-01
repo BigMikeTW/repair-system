@@ -121,21 +121,36 @@ function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
 
 // ── 報價單表單 ────────────────────────────────────────────────
 function QuotationForm({ onClose, onSuccess, editData }) {
-  const [initialized, setInitialized] = React.useState(!editData);
   const [loadedItems, setLoadedItems] = React.useState(null);
+  const [loading, setLoading] = React.useState(!!editData);
 
   React.useEffect(() => {
     if (editData?.id) {
+      setLoading(true);
       financeAPI.getQuotation(editData.id).then(r => {
         setLoadedItems(r.data?.items || []);
-        setInitialized(true);
+        setLoading(false);
       }).catch(() => {
         setLoadedItems([]);
-        setInitialized(true);
+        setLoading(false);
       });
     }
   }, [editData?.id]);
 
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 text-center">
+          <div className="text-gray-500">載入中...</div>
+        </div>
+      </div>
+    );
+  }
+
+  return <QuotationFormInner onClose={onClose} onSuccess={onSuccess} editData={editData} loadedItems={loadedItems} />;
+}
+
+function QuotationFormInner({ onClose, onSuccess, editData, loadedItems }) {
   const defaultItems = loadedItems || (editData?.items) || [{ item_name: '', description: '', quantity: 1, unit: '', unit_price: 0 }];
 
   const { register, control, handleSubmit, watch, formState: { isSubmitting } } = useForm({
@@ -151,16 +166,6 @@ function QuotationForm({ onClose, onSuccess, editData }) {
   const tax = subtotal * (taxRate / 100);
 
   const { data: cases } = useQuery('allCasesForQuote', () => casesAPI.list({ limit: 200 }).then(r => r.data));
-
-  if (editData && !initialized) {
-    return (
-      <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-xl p-8 text-center">
-          <div className="text-gray-500">載入中...</div>
-        </div>
-      </div>
-    );
-  }
 
   const onSubmit = async (data) => {
     try {
