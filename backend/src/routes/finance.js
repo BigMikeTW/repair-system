@@ -662,15 +662,21 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   doc.y=ty+18;
 
   items.rows.forEach((item,idx)=>{
-    const rh=20; let ry=doc.y;
-    doc.rect(pdf.LM,ry,pdf.CW,rh).fill(idx%2===0?pdf.C.row:pdf.C.white);
     const row=[item.item_name,item.description,item.quantity,item.unit,
                pdf.money(item.unit_price),pdf.money(parseFloat(item.unit_price)*parseFloat(item.quantity))];
+    // 動態計算列高（根據最長欄位）
+    doc.font('CJK').fontSize(10);
+    const h0 = doc.heightOfString(row[0]||'', {width:cw[0]-8});
+    doc.font('CJK').fontSize(9);
+    const h1 = doc.heightOfString(row[1]||'', {width:cw[1]-8});
+    const rh = Math.max(20, h0+10, h1+10);
+    let ry=doc.y;
+    doc.rect(pdf.LM,ry,pdf.CW,rh).fill(idx%2===0?pdf.C.row:pdf.C.white);
     cw.forEach((w,i)=>{
       const x=pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0);
       doc.font('CJK').fontSize(i===0?10:9)
          .fillColor(pdf.C.dark)
-         .text(row[i]||'',x+5,ry+5,{width:w-8,lineBreak:false,align:i>=2?'center':'left'});
+         .text(row[i]||'',x+5,ry+5,{width:w-8,lineBreak:i<2,align:i>=2?'center':'left'});
     });
     doc.rect(pdf.LM,ry+rh-0.3,pdf.CW,0.3).fill(pdf.C.border);
     doc.y=ry+rh;
@@ -1012,8 +1018,12 @@ router.get('/closures/:id/pdf', authenticate, asyncHandler(async (req, res) => {
     doc.y+=3;
     pdf.sectionLabel(doc,'FIELD WORK RECORDS');
     notesRes.rows.forEach((note,i)=>{
-      if (doc.y > 740) { doc.addPage(); doc.y=30; }
-      const rh=48; const y=doc.y;
+      if (doc.y > 700) { doc.addPage(); doc.y=30; }
+      // 動態計算列高
+      doc.font('CJK').fontSize(10);
+      const contentH = doc.heightOfString(note.content||'', {width:pdf.CW-28});
+      const rh = Math.max(48, contentH + 30);
+      const y=doc.y;
       doc.rect(pdf.LM,y,10,rh).fill(pdf.C.acc);
       doc.rect(pdf.LM+10,y,pdf.CW-10,rh).fill(i%2===0?pdf.C.row:pdf.C.white);
       doc.font('CJK').fontSize(10).fillColor(pdf.C.white)

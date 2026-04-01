@@ -183,33 +183,44 @@ function sectionLabel(doc, text) {
 
 // ── 客戶資訊 ─────────────────────────────────────────────────
 function clientBlock(doc, rows) {
-  // rows: [{label, value, label2, value2}]
-  const c1=62, c2=187, c3=62, c4=190, rh=20;
+  const c1=62, c2=187, c3=62, c4=190;
+  const PAD_X=8, PAD_Y=5, MIN_RH=20;
   let y = doc.y;
+
   rows.forEach((row, i) => {
+    // 動態計算此列需要的高度
+    const big = row.label==='業主 / 公司';
+    setFont(doc, big, big?10:9.5, C.dark);
+    const h_v1 = doc.heightOfString(row.value||'—', {width:c2-PAD_X*2});
+    const h_v2 = row.value2 ? doc.heightOfString(row.value2||'—', {width:c4-PAD_X*2}) : 0;
+    const rh = Math.max(MIN_RH, h_v1+PAD_Y*2, h_v2+PAD_Y*2);
+
     // label1
     doc.rect(LM,y,c1,rh).fill(C.label);
     setFont(doc,false,8,C.sub);
-    doc.text(row.label, LM+6,y+6,{width:c1-8,lineBreak:false});
+    doc.text(row.label, LM+PAD_X, y+PAD_Y, {width:c1-PAD_X*2, lineBreak:false});
+
     // value1
     doc.rect(LM+c1,y,c2,rh).fill(i%2===0?C.white:C.row);
-    const big = row.label==='業主 / 公司';
-    setFont(doc,big,big?10:9.5,C.dark);
-    doc.text(row.value||'—',LM+c1+8,y+(big?5:6),{width:c2-12,lineBreak:false});
-    // label2
-    if (row.label2) {
+    setFont(doc, big, big?10:9.5, C.dark);
+    doc.text(row.value||'—', LM+c1+PAD_X, y+PAD_Y, {width:c2-PAD_X*2, lineBreak:true});
+
+    // label2 + value2
+    if (row.label2 !== undefined) {
       doc.rect(LM+c1+c2,y,c3,rh).fill(C.label);
       setFont(doc,false,8,C.sub);
-      doc.text(row.label2,LM+c1+c2+6,y+6,{width:c3-8,lineBreak:false});
-      // value2
+      doc.text(row.label2||'', LM+c1+c2+PAD_X, y+PAD_Y, {width:c3-PAD_X*2, lineBreak:false});
+
       doc.rect(LM+c1+c2+c3,y,c4,rh).fill(i%2===0?C.white:C.row);
       const isCase = row.label2==='案件編號';
-      setFont(doc,isCase,9.5,isCase?C.acc:C.dark);
-      doc.text(row.value2||'—',LM+c1+c2+c3+8,y+6,{width:c4-12,lineBreak:false});
+      setFont(doc, isCase, 9.5, isCase?C.acc:C.dark);
+      doc.text(row.value2||'—', LM+c1+c2+c3+PAD_X, y+PAD_Y, {width:c4-PAD_X*2, lineBreak:true});
     }
+
     doc.rect(LM,y+rh-0.4,CW,0.4).fill(C.border);
     y += rh;
   });
+
   doc.rect(LM,doc.y,CW,y-doc.y).stroke(C.border);
   doc.y = y + 7;
 }
