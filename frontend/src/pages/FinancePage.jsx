@@ -38,12 +38,27 @@ function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
   );
   const [selectedRemarks, setSelectedRemarks] = useState([]);
 
-  const handleDownload = () => {
-    let url = pdfUrl;
+  const buildUrl = () => {
     const params = new URLSearchParams();
     params.set('company', selectedCompany);
     if (selectedRemarks.length > 0) params.set('remarks', selectedRemarks.join(','));
-    window.open(`${url}&${params.toString()}`, '_blank');
+    return `${pdfUrl}&${params.toString()}`;
+  };
+
+  const handleDownload = () => {
+    // 直接下載
+    const a = document.createElement('a');
+    a.href = buildUrl();
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    onClose();
+  };
+
+  const handlePreview = () => {
+    // 在新分頁開啟，使用者可於瀏覽器內下載
+    window.open(buildUrl(), '_blank');
     onClose();
   };
 
@@ -92,6 +107,9 @@ function PdfDownloadModal({ title, pdfUrl, module, onClose }) {
         </div>
         <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-3">
           <button className="btn" onClick={onClose}>取消</button>
+          <button className="btn gap-2" onClick={handlePreview}>
+            <ExternalLink size={14} /> 瀏覽器開啟
+          </button>
           <button className="btn btn-primary gap-2" onClick={handleDownload}>
             <Download size={14} /> 下載 PDF
           </button>

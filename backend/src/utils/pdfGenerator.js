@@ -8,43 +8,45 @@ const PDFDocument = require('pdfkit');
 const fs   = require('fs');
 const path = require('path');
 
-// ── 字型設定（Alpine Linux + font-wqy-zenhei）────────────────
+// ── 字型設定（Alpine Linux + font-noto-cjk）─────────────────
+// PDFKit 只支援 .ttf 或 .otf，不支援 .ttc（TrueType Collection）
 const FONT_PATHS = [
-  // Alpine apk font-wqy-zenhei 安裝路徑
-  '/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc',
-  '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-  '/usr/share/fonts/truetype/wqy/wqy-microhei.ttf',
-  // 備用路徑
-  '/usr/share/fonts/wqy/wqy-zenhei.ttc',
-  '/tmp/WQY.ttf',
+  '/tmp/CJK.otf',    // Dockerfile 預先複製的 Noto CJK OTF
+  '/tmp/WQY.ttf',    // 備用
+  // Noto CJK OTF 路徑
+  '/usr/share/fonts/noto-cjk/NotoSansCJKtc-Regular.otf',
+  '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
 ];
 
 let FONT_REGULAR = null;
 for (const fp of FONT_PATHS) {
   if (fs.existsSync(fp)) {
+    // 確認不是 .ttc（PDFKit 不支援）
+    if (fp.endsWith('.ttc')) {
+      console.warn('[PDF] Skipping .ttc font (not supported by PDFKit):', fp);
+      continue;
+    }
     FONT_REGULAR = fp;
     console.log('[PDF] Using font:', fp);
     break;
   }
 }
 if (!FONT_REGULAR) {
-  console.warn('[PDF] No CJK font found, PDF will use Helvetica (no Chinese)');
+  console.warn('[PDF] No CJK font found, will use Helvetica (no Chinese rendering)');
 }
 
-// 確保中文字型可用
+// 確保中文字型可用（PDFKit 只支援 .ttf/.otf，不支援 .ttc）
 async function ensureChineseFont() {
   if (FONT_REGULAR) return FONT_REGULAR;
 
   const tryPaths = [
-    '/usr/share/fonts/wqy-zenhei/wqy-zenhei.ttc',
-    '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc',
-    '/usr/share/fonts/truetype/wqy/wqy-microhei.ttf',
-    '/usr/share/fonts/wqy/wqy-zenhei.ttc',
+    '/tmp/CJK.otf',
     '/tmp/WQY.ttf',
+    '/usr/share/fonts/noto-cjk/NotoSansCJKtc-Regular.otf',
   ];
 
   for (const fp of tryPaths) {
-    if (fs.existsSync(fp)) {
+    if (fs.existsSync(fp) && !fp.endsWith('.ttc')) {
       FONT_REGULAR = fp;
       console.log('[PDF] Found font at runtime:', fp);
       return fp;
