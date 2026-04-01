@@ -2,15 +2,12 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# 安裝基本工具
 RUN apk add --no-cache postgresql-client wget ca-certificates
 
-# 直接下載 Noto Sans TC 繁體中文字型（.ttf 格式，PDFKit 完全支援）
 RUN mkdir -p /app/fonts && \
-    wget -q "https://github.com/google/fonts/raw/main/ofl/notosanstc/NotoSansTC-Regular.ttf" \
+    wget -q "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/notosanstc/NotoSansTC-Regular.ttf" \
          -O /app/fonts/NotoSansTC.ttf && \
-    echo "Font size: $(wc -c < /app/fonts/NotoSansTC.ttf) bytes" && \
-    ls -la /app/fonts/
+    echo "[FONT] OK: $(wc -c < /app/fonts/NotoSansTC.ttf) bytes"
 
 COPY package*.json ./
 RUN npm ci --only=production
