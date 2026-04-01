@@ -137,13 +137,13 @@ const generateQuotationPdfBuffer = async (quotId) => {
     // Table header
     doc.save();
     doc.rect(40, tY, 515, 22).fill(TECH_COLORS.dark);
-    doc.fillColor(TECH_COLORS.white).fontSize(8).font('CJK');
+    doc.fillColor(TECH_COLORS.white).fontSize(9).font('CJK');
     doc.text('項目名稱', 48, tY + 7, { width: 160 });
     doc.text('說明', 215, tY + 7, { width: 100 });
-    doc.text('數量', 320, tY + 7, { width: 40 });
-    doc.text('單位', 365, tY + 7, { width: 40 });
-    doc.text('單價', 410, tY + 7, { width: 65 });
-    doc.text('小計', 480, tY + 7, { width: 70 });
+    doc.text('數量', 320, tY + 7, { width: 40, align: 'center' });
+    doc.text('單位', 365, tY + 7, { width: 40, align: 'center' });
+    doc.text('單價', 410, tY + 7, { width: 65, align: 'right' });
+    doc.text('小計', 480, tY + 7, { width: 70, align: 'right' });
     doc.restore();
     doc.y = tY + 22;
 
@@ -244,9 +244,9 @@ const generateInvoicePdfBuffer = async (invId) => {
     const tY = doc.y;
     doc.save();
     doc.rect(40, tY, 515, 22).fill(TECH_COLORS.dark);
-    doc.fillColor(TECH_COLORS.white).fontSize(8).font('CJK');
+    doc.fillColor(TECH_COLORS.white).fontSize(9).font('CJK');
     doc.text('項目', 48, tY + 7, { width: 300 });
-    doc.text('金額', 460, tY + 7, { width: 90 });
+    doc.text('金額', 460, tY + 7, { width: 90, align: 'right' });
     doc.restore();
     doc.y = tY + 22;
 
@@ -661,13 +661,13 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   const ths=['項  目  名  稱','說  明','數量','單位','單  價','小  計'];
   let ty=doc.y;
   cw.forEach((w,i)=>{
-    doc.rect(pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0),ty,w,18).fill(pdf.C.dark);
+    doc.rect(pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0),ty,w,20).fill(pdf.C.dark);
     const align = i>=4 ? 'right' : i>=2 ? 'center' : 'left';
-    doc.font('CJK').fontSize(8.5).fillColor(pdf.C.sub)
-       .text(ths[i],pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0)+4,ty+5,{width:w-8,lineBreak:false,align});
+    doc.font('CJK').fontSize(8.5).fillColor(pdf.C.white)
+       .text(ths[i],pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0)+4,ty+6,{width:w-8,lineBreak:false,align});
   });
-  doc.rect(pdf.LM,ty,pdf.CW,18).stroke(pdf.C.border);
-  doc.y=ty+18;
+  doc.rect(pdf.LM,ty,pdf.CW,20).stroke(pdf.C.border);
+  doc.y=ty+20;
 
   items.rows.forEach((item,idx)=>{
     const row=[item.item_name,item.description,item.quantity,item.unit,
@@ -868,13 +868,13 @@ router.get('/invoices/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   const brows=[['項目','金額'],['工程費用',pdf.money(inv.amount)],[`稅金 (${inv.tax_rate||5}%)`,pdf.money(inv.tax_amount)]];
   let btY=doc.y;
   brows.forEach((row,i)=>{
-    const rh=i===0?18:20; const bg=i===0?pdf.C.dark:(i%2===0?pdf.C.row:pdf.C.white);
+    const rh=i===0?20:20; const bg=i===0?pdf.C.dark:(i%2===0?pdf.C.row:pdf.C.white);
     doc.rect(pdf.LM,btY,pdf.CW,rh).fill(bg);
-    doc.font('CJK').fontSize(i===0?8.5:10)
-       .fillColor(i===0?pdf.C.sub:pdf.C.dark)
-       .text(row[0],pdf.LM+8,btY+(i===0?5:5),{lineBreak:false});
-    doc.font('CJK').fontSize(i===0?8.5:10)
-       .fillColor(i===0?pdf.C.sub:pdf.C.dark)
+    doc.font('CJK').fontSize(i===0?9:10)
+       .fillColor(i===0?pdf.C.white:pdf.C.dark)
+       .text(row[0],pdf.LM+8,btY+5,{lineBreak:false});
+    doc.font('CJK').fontSize(i===0?9:10)
+       .fillColor(i===0?pdf.C.white:pdf.C.dark)
        .text(row[1],0,btY+(i===0?5:5),{width:pdf.W-pdf.RM-10,align:'right',lineBreak:false});
     if(i>0) doc.rect(pdf.LM,btY+rh-0.3,pdf.CW,0.3).fill(pdf.C.border);
     btY+=rh;
