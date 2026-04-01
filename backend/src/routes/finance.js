@@ -59,14 +59,14 @@ const drawTechHeader = (doc, title, subtitle, number) => {
   // Orange accent bar
   doc.rect(0, 95, 595, 5).fill(TECH_COLORS.primary);
   // Title
-  doc.fillColor(TECH_COLORS.white).fontSize(22).font('Helvetica-Bold')
+  doc.fillColor(TECH_COLORS.white).fontSize(22).font('CJK')
      .text(title, 40, 22, { width: 360 });
   // Subtitle
-  doc.fillColor(TECH_COLORS.primary).fontSize(10).font('Helvetica')
+  doc.fillColor(TECH_COLORS.primary).fontSize(10).font('CJK')
      .text(subtitle, 40, 52);
   // Number box
   doc.roundedRect(430, 18, 130, 50, 4).fill(TECH_COLORS.primary);
-  doc.fillColor(TECH_COLORS.white).fontSize(8).font('Helvetica-Bold')
+  doc.fillColor(TECH_COLORS.white).fontSize(8).font('CJK')
      .text('DOCUMENT NO.', 440, 25);
   doc.fontSize(11).text(number, 440, 37, { width: 110 });
   // Date
@@ -80,7 +80,7 @@ const drawSectionHeader = (doc, label, y) => {
   doc.save();
   doc.rect(40, yCur, 4, 16).fill(TECH_COLORS.primary);
   doc.rect(48, yCur + 6, 507, 1).fill(TECH_COLORS.primary).fillOpacity(0.3);
-  doc.fillColor(TECH_COLORS.dark).fontSize(10).font('Helvetica-Bold')
+  doc.fillColor(TECH_COLORS.dark).fontSize(10).font('CJK')
      .text(label, 56, yCur + 1);
   doc.restore();
   doc.moveDown(0.1);
@@ -90,9 +90,9 @@ const drawSectionHeader = (doc, label, y) => {
 const drawInfoRow = (doc, label, value, x1, x2, y) => {
   const yCur = y || doc.y;
   doc.save();
-  doc.fillColor(TECH_COLORS.gray).fontSize(8).font('Helvetica')
+  doc.fillColor(TECH_COLORS.gray).fontSize(8).font('CJK')
      .text(label, x1 || 40, yCur, { width: 80 });
-  doc.fillColor(TECH_COLORS.text).fontSize(9).font('Helvetica-Bold')
+  doc.fillColor(TECH_COLORS.text).fontSize(9).font('CJK')
      .text(value || '--', (x2 || 40) + 80, yCur, { width: 200 });
   doc.restore();
   doc.y = yCur + 14;
@@ -137,7 +137,7 @@ const generateQuotationPdfBuffer = async (quotId) => {
     // Table header
     doc.save();
     doc.rect(40, tY, 515, 22).fill(TECH_COLORS.dark);
-    doc.fillColor(TECH_COLORS.white).fontSize(8).font('Helvetica-Bold');
+    doc.fillColor(TECH_COLORS.white).fontSize(8).font('CJK');
     doc.text('項目名稱', 48, tY + 7, { width: 160 });
     doc.text('說明', 215, tY + 7, { width: 100 });
     doc.text('數量', 320, tY + 7, { width: 40 });
@@ -153,13 +153,13 @@ const generateQuotationPdfBuffer = async (quotId) => {
         doc.save().rect(40, rowY, 515, 20).fill('#F8FAFC').restore();
       }
       doc.save();
-      doc.fillColor(TECH_COLORS.text).fontSize(8).font('Helvetica');
+      doc.fillColor(TECH_COLORS.text).fontSize(8).font('CJK');
       doc.text(item.item_name || '', 48, rowY + 6, { width: 160 });
       doc.text(item.description || '', 215, rowY + 6, { width: 100 });
       doc.text(String(item.quantity), 320, rowY + 6, { width: 40 });
       doc.text(item.unit || '', 365, rowY + 6, { width: 40 });
       doc.text(`$${Number(item.unit_price).toLocaleString()}`, 410, rowY + 6, { width: 65 });
-      doc.fillColor(TECH_COLORS.dark).font('Helvetica-Bold')
+      doc.fillColor(TECH_COLORS.dark).font('CJK')
          .text(`$${Number(item.subtotal).toLocaleString()}`, 480, rowY + 6, { width: 70 });
       doc.restore();
       doc.y = rowY + 20;
@@ -172,16 +172,16 @@ const generateQuotationPdfBuffer = async (quotId) => {
     doc.restore();
     doc.y += 8;
     const totY = doc.y;
-    doc.fillColor(TECH_COLORS.gray).fontSize(9).font('Helvetica').text('小計', 380, totY);
-    doc.fillColor(TECH_COLORS.text).font('Helvetica-Bold').text(`$${Number(quot.subtotal).toLocaleString()}`, 470, totY, { align: 'right', width: 85 });
-    doc.fillColor(TECH_COLORS.gray).font('Helvetica').text(`稅金 (${quot.tax_rate}%)`, 380, totY + 16);
-    doc.fillColor(TECH_COLORS.text).font('Helvetica-Bold').text(`$${Number(quot.tax_amount).toLocaleString()}`, 470, totY + 16, { align: 'right', width: 85 });
+    doc.fillColor(TECH_COLORS.gray).fontSize(9).font('CJK').text('小計', 380, totY);
+    doc.fillColor(TECH_COLORS.text).font('CJK').text(`$${Number(quot.subtotal).toLocaleString()}`, 470, totY, { align: 'right', width: 85 });
+    doc.fillColor(TECH_COLORS.gray).font('CJK').text(`稅金 (${quot.tax_rate}%)`, 380, totY + 16);
+    doc.fillColor(TECH_COLORS.text).font('CJK').text(`$${Number(quot.tax_amount).toLocaleString()}`, 470, totY + 16, { align: 'right', width: 85 });
 
     // Total box
     doc.save();
     doc.roundedRect(350, totY + 36, 205, 32, 4).fill(TECH_COLORS.primary);
-    doc.fillColor(TECH_COLORS.white).fontSize(10).font('Helvetica').text('報價總金額', 360, totY + 44);
-    doc.fontSize(14).font('Helvetica-Bold').text(`$${Number(quot.total).toLocaleString()}`, 360, totY + 44, { align: 'right', width: 185 });
+    doc.fillColor(TECH_COLORS.white).fontSize(10).font('CJK').text('報價總金額', 360, totY + 44);
+    doc.fontSize(14).font('CJK').text(`$${Number(quot.total).toLocaleString()}`, 360, totY + 44, { align: 'right', width: 185 });
     doc.restore();
     doc.y = totY + 76;
 
@@ -190,7 +190,7 @@ const generateQuotationPdfBuffer = async (quotId) => {
       drawSectionHeader(doc, '備注事項');
       doc.save().rect(40, doc.y, 515, 1).fill(TECH_COLORS.light).restore();
       doc.save().rect(40, doc.y, 3, 40).fill(TECH_COLORS.primary).restore();
-      doc.fillColor(TECH_COLORS.text).fontSize(9).font('Helvetica')
+      doc.fillColor(TECH_COLORS.text).fontSize(9).font('CJK')
          .text(quot.notes, 48, doc.y + 4, { width: 507 });
       doc.restore();
     }
@@ -244,7 +244,7 @@ const generateInvoicePdfBuffer = async (invId) => {
     const tY = doc.y;
     doc.save();
     doc.rect(40, tY, 515, 22).fill(TECH_COLORS.dark);
-    doc.fillColor(TECH_COLORS.white).fontSize(8).font('Helvetica-Bold');
+    doc.fillColor(TECH_COLORS.white).fontSize(8).font('CJK');
     doc.text('項目', 48, tY + 7, { width: 300 });
     doc.text('金額', 460, tY + 7, { width: 90 });
     doc.restore();
@@ -257,8 +257,8 @@ const generateInvoicePdfBuffer = async (invId) => {
     rows.forEach(([label, val], i) => {
       const rowY = doc.y;
       if (i % 2 === 0) doc.save().rect(40, rowY, 515, 20).fill('#F8FAFC').restore();
-      doc.fillColor(TECH_COLORS.text).fontSize(9).font('Helvetica').text(label, 48, rowY + 6, { width: 300 });
-      doc.font('Helvetica-Bold').text(val, 460, rowY + 6, { width: 90 });
+      doc.fillColor(TECH_COLORS.text).fontSize(9).font('CJK').text(label, 48, rowY + 6, { width: 300 });
+      doc.font('CJK').text(val, 460, rowY + 6, { width: 90 });
       doc.y = rowY + 20;
     });
 
@@ -267,8 +267,8 @@ const generateInvoicePdfBuffer = async (invId) => {
     doc.y += 12;
     doc.save();
     doc.roundedRect(350, doc.y, 205, 32, 4).fill(TECH_COLORS.primary);
-    doc.fillColor(TECH_COLORS.white).fontSize(10).font('Helvetica').text('請款總金額', 360, doc.y + 10);
-    doc.fontSize(14).font('Helvetica-Bold').text(`$${Number(invoice.total_amount).toLocaleString()}`, 360, doc.y + 10, { align: 'right', width: 185 });
+    doc.fillColor(TECH_COLORS.white).fontSize(10).font('CJK').text('請款總金額', 360, doc.y + 10);
+    doc.fontSize(14).font('CJK').text(`$${Number(invoice.total_amount).toLocaleString()}`, 360, doc.y + 10, { align: 'right', width: 185 });
     doc.restore();
     doc.y += 44;
 
@@ -278,7 +278,7 @@ const generateInvoicePdfBuffer = async (invId) => {
       let sY = doc.y;
       drawInfoRow(doc, '簽收人', invoice.signed_by, 40, 40, sY);
       drawInfoRow(doc, '簽收時間', invoice.signed_at ? new Date(invoice.signed_at).toLocaleString('zh-TW') : '--', 40, 40, sY + 14);
-      doc.save().fillColor(TECH_COLORS.green).fontSize(9).font('Helvetica-Bold')
+      doc.save().fillColor(TECH_COLORS.green).fontSize(9).font('CJK')
          .text('✓ 業主已確認工程完工並完成簽名', 40, sY + 30).restore();
       doc.y = sY + 46;
     }
@@ -286,7 +286,7 @@ const generateInvoicePdfBuffer = async (invId) => {
     if (invoice.notes) {
       doc.y += 8;
       drawSectionHeader(doc, '備注事項');
-      doc.fillColor(TECH_COLORS.text).fontSize(9).font('Helvetica')
+      doc.fillColor(TECH_COLORS.text).fontSize(9).font('CJK')
          .text(invoice.notes, 48, doc.y + 4, { width: 507 });
     }
 
@@ -340,15 +340,15 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
 
     // Logo area & title
     doc.save();
-    doc.fillColor('#FF6B00').fontSize(9).font('Helvetica-Bold').text('皇祥工程設計', 40, 20);
-    doc.fillColor('#FFFFFF').fontSize(20).font('Helvetica-Bold').text('工程結案報告', 40, 35);
-    doc.fillColor('#FF6B00').fontSize(10).font('Helvetica').text('ENGINEERING CLOSURE REPORT', 40, 62);
+    doc.fillColor('#FF6B00').fontSize(9).font('CJK').text('皇祥工程設計', 40, 20);
+    doc.fillColor('#FFFFFF').fontSize(20).font('CJK').text('工程結案報告', 40, 35);
+    doc.fillColor('#FF6B00').fontSize(10).font('CJK').text('ENGINEERING CLOSURE REPORT', 40, 62);
 
     // Case number badge
     doc.roundedRect(400, 16, 165, 55, 6).stroke('#FF6B00').strokeOpacity(0.8);
-    doc.fillColor('#FF6B00').fontSize(7).font('Helvetica-Bold').text('CASE NUMBER', 412, 25);
-    doc.fillColor('#FFFFFF').fontSize(14).font('Helvetica-Bold').text(c.case_number, 412, 38);
-    doc.fillColor('#95A5A6').fontSize(8).font('Helvetica')
+    doc.fillColor('#FF6B00').fontSize(7).font('CJK').text('CASE NUMBER', 412, 25);
+    doc.fillColor('#FFFFFF').fontSize(14).font('CJK').text(c.case_number, 412, 38);
+    doc.fillColor('#95A5A6').fontSize(8).font('CJK')
        .text(`結案：${c.signed_at ? new Date(c.signed_at).toLocaleDateString('zh-TW') : '--'}`, 412, 58);
     doc.restore();
     doc.y = 132;
@@ -358,8 +358,8 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     doc.roundedRect(30, doc.y, 535, 56, 6).fill('#F0F7FF');
     doc.rect(30, doc.y, 4, 56).fill('#FF6B00');
     const sumY = doc.y + 8;
-    doc.fillColor('#1A1A2E').fontSize(10).font('Helvetica-Bold').text('案件概要', 42, sumY);
-    doc.fillColor('#2C3E50').fontSize(8).font('Helvetica')
+    doc.fillColor('#1A1A2E').fontSize(10).font('CJK').text('案件概要', 42, sumY);
+    doc.fillColor('#2C3E50').fontSize(8).font('CJK')
        .text(`標題：${c.title}`, 42, sumY + 16)
        .text(`類型：${c.case_type || '--'}  ·  緊急程度：${c.urgency || '--'}  ·  狀態：已結案`, 42, sumY + 28)
        .text(`業主/公司：${c.owner_company || c.owner_name || '--'}  ·  地點：${c.location_address || '--'}`, 42, sumY + 40);
@@ -369,7 +369,7 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     // ─ Section: 工程人員資訊 ─────────────────────────────────────
     doc.y += 8;
     doc.save().rect(30, doc.y, 4, 14).fill('#FF6B00').restore();
-    doc.fillColor('#1A1A2E').fontSize(10).font('Helvetica-Bold').text('工程人員資訊', 40, doc.y + 1);
+    doc.fillColor('#1A1A2E').fontSize(10).font('CJK').text('工程人員資訊', 40, doc.y + 1);
     doc.y += 20;
 
     const col1x = 40, col2x = 300;
@@ -380,22 +380,22 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
       ['工程師信箱', c.engineer_email || '--'],
     ];
     pairs.forEach(([lbl, val], i) => {
-      doc.fillColor('#95A5A6').fontSize(8).font('Helvetica').text(lbl, col1x, engY + i * 16);
-      doc.fillColor('#2C3E50').fontSize(8).font('Helvetica-Bold').text(val, col1x + 85, engY + i * 16);
+      doc.fillColor('#95A5A6').fontSize(8).font('CJK').text(lbl, col1x, engY + i * 16);
+      doc.fillColor('#2C3E50').fontSize(8).font('CJK').text(val, col1x + 85, engY + i * 16);
     });
     const pairs2 = [
       ['指派人', c.assigned_by ? `UID-${c.assigned_by}` : '--'],
       ['指派時間', c.assigned_at ? new Date(c.assigned_at).toLocaleString('zh-TW') : '--'],
     ];
     pairs2.forEach(([lbl, val], i) => {
-      doc.fillColor('#95A5A6').fontSize(8).font('Helvetica').text(lbl, col2x, engY + i * 16);
-      doc.fillColor('#2C3E50').fontSize(8).font('Helvetica-Bold').text(val, col2x + 85, engY + i * 16);
+      doc.fillColor('#95A5A6').fontSize(8).font('CJK').text(lbl, col2x, engY + i * 16);
+      doc.fillColor('#2C3E50').fontSize(8).font('CJK').text(val, col2x + 85, engY + i * 16);
     });
     doc.y = engY + 50;
 
     // ─ Section: 施工時間記錄 ─────────────────────────────────────
     doc.save().rect(30, doc.y, 4, 14).fill('#FF6B00').restore();
-    doc.fillColor('#1A1A2E').fontSize(10).font('Helvetica-Bold').text('施工時間記錄', 40, doc.y + 1);
+    doc.fillColor('#1A1A2E').fontSize(10).font('CJK').text('施工時間記錄', 40, doc.y + 1);
     doc.y += 20;
 
     const timeItems = [
@@ -413,7 +413,7 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
          .fill(hasVal ? '#1A1A2E' : '#F8F9FA');
       doc.fillColor(hasVal ? '#FF6B00' : '#CCC').fontSize(14).text(item.icon, tx + 8, timeY + 8);
       doc.fillColor(hasVal ? '#95A5A6' : '#CCC').fontSize(7).text(item.label, tx + 30, timeY + 10);
-      doc.fillColor(hasVal ? '#FFFFFF' : '#CCC').fontSize(8).font('Helvetica-Bold')
+      doc.fillColor(hasVal ? '#FFFFFF' : '#CCC').fontSize(8).font('CJK')
          .text(hasVal ? new Date(item.value).toLocaleString('zh-TW') : '未記錄', tx + 8, timeY + 28, { width: 104 });
     });
     doc.restore();
@@ -422,13 +422,13 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     // ─ Section: 施工說明 ─────────────────────────────────────────
     doc.y += 6;
     doc.save().rect(30, doc.y, 4, 14).fill('#FF6B00').restore();
-    doc.fillColor('#1A1A2E').fontSize(10).font('Helvetica-Bold').text('施工說明', 40, doc.y + 1);
+    doc.fillColor('#1A1A2E').fontSize(10).font('CJK').text('施工說明', 40, doc.y + 1);
     doc.y += 20;
 
     doc.save();
     doc.roundedRect(40, doc.y, 515, Math.max(36, Math.min(100, (c.description || '').length * 6)), 4)
        .fill('#F8F9FA');
-    doc.fillColor('#2C3E50').fontSize(9).font('Helvetica')
+    doc.fillColor('#2C3E50').fontSize(9).font('CJK')
        .text(c.description || '--', 50, doc.y + 8, { width: 495 });
     doc.restore();
     doc.y += Math.max(46, Math.min(110, (c.description || '').length * 6 + 10));
@@ -437,7 +437,7 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     if (notesResult.rows.length > 0) {
       doc.y += 6;
       doc.save().rect(30, doc.y, 4, 14).fill('#FF6B00').restore();
-      doc.fillColor('#1A1A2E').fontSize(10).font('Helvetica-Bold').text('現場作業記錄', 40, doc.y + 1);
+      doc.fillColor('#1A1A2E').fontSize(10).font('CJK').text('現場作業記錄', 40, doc.y + 1);
       doc.y += 20;
 
       notesResult.rows.forEach((note, i) => {
@@ -448,9 +448,9 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
         doc.roundedRect(40, nY, 515, 42, 4)
            .fill(i % 2 === 0 ? '#F8F9FA' : '#FFF8F0');
         doc.rect(40, nY, 3, 42).fill('#FF6B00');
-        doc.fillColor('#FF6B00').fontSize(7).font('Helvetica-Bold')
+        doc.fillColor('#FF6B00').fontSize(7).font('CJK')
            .text(`#${String(i+1).padStart(2,'0')}`, 50, nY + 6);
-        doc.fillColor('#95A5A6').fontSize(7).font('Helvetica')
+        doc.fillColor('#95A5A6').fontSize(7).font('CJK')
            .text(new Date(note.created_at).toLocaleString('zh-TW'), 75, nY + 6)
            .text(note.author_name || '--', 230, nY + 6);
         doc.fillColor('#2C3E50').fontSize(8.5)
@@ -464,20 +464,20 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     if (doc.y > 680) { doc.addPage(); doc.y = 40; }
     doc.y += 8;
     doc.save().rect(30, doc.y, 4, 14).fill('#FF6B00').restore();
-    doc.fillColor('#1A1A2E').fontSize(10).font('Helvetica-Bold').text('業主簽收確認', 40, doc.y + 1);
+    doc.fillColor('#1A1A2E').fontSize(10).font('CJK').text('業主簽收確認', 40, doc.y + 1);
     doc.y += 20;
 
     doc.save();
     doc.roundedRect(40, doc.y, 515, 56, 6).fill('#F0FFF4');
     doc.rect(40, doc.y, 4, 56).fill('#27AE60');
     const sigY = doc.y + 8;
-    doc.fillColor('#27AE60').fontSize(9).font('Helvetica-Bold')
+    doc.fillColor('#27AE60').fontSize(9).font('CJK')
        .text('✓ 業主已簽名確認完工', 52, sigY);
-    doc.fillColor('#95A5A6').fontSize(8).font('Helvetica')
+    doc.fillColor('#95A5A6').fontSize(8).font('CJK')
        .text('簽收人', 52, sigY + 18)
        .text('簽收時間', 200, sigY + 18)
        .text('完工備注', 380, sigY + 18);
-    doc.fillColor('#2C3E50').font('Helvetica-Bold')
+    doc.fillColor('#2C3E50').font('CJK')
        .text(c.signed_by || '--', 52, sigY + 30)
        .text(c.signed_at ? new Date(c.signed_at).toLocaleString('zh-TW') : '--', 200, sigY + 30)
        .text(c.completion_notes || '--', 380, sigY + 30, { width: 160 });
@@ -501,8 +501,8 @@ const generateClosureReportPdf = async (caseId, closureData = {}) => {
     doc.save();
     doc.rect(0, footerY, 595, 52).fill('#1A1A2E');
     doc.rect(0, footerY, 595, 3).fill('#FF6B00');
-    doc.fillColor('#FF6B00').fontSize(8).font('Helvetica-Bold').text('皇祥工程設計', 40, footerY + 12);
-    doc.fillColor('#95A5A6').fontSize(7.5).font('Helvetica')
+    doc.fillColor('#FF6B00').fontSize(8).font('CJK').text('皇祥工程設計', 40, footerY + 12);
+    doc.fillColor('#95A5A6').fontSize(7.5).font('CJK')
        .text('維修工程管理系統  ·  本報告由系統自動產生，具備法律效力之簽收記錄', 85, footerY + 14);
     doc.fillColor('#4A4A6A').fontSize(7)
        .text(`列印時間：${new Date().toLocaleString('zh-TW')}  ·  案件編號：${c.case_number}`, 40, footerY + 30);
@@ -655,7 +655,7 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   let ty=doc.y;
   cw.forEach((w,i)=>{
     doc.rect(pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0),ty,w,18).fill(pdf.C.dark);
-    doc.font('Helvetica').fontSize(8.5).fillColor(pdf.C.sub)
+    doc.font('CJK').fontSize(8.5).fillColor(pdf.C.sub)
        .text(ths[i],pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0)+5,ty+5,{width:w-8,lineBreak:false,align:i>=2?'center':'left'});
   });
   doc.rect(pdf.LM,ty,pdf.CW,18).stroke(pdf.C.border);
@@ -668,7 +668,7 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
                pdf.money(item.unit_price),pdf.money(parseFloat(item.unit_price)*parseFloat(item.quantity))];
     cw.forEach((w,i)=>{
       const x=pdf.LM+cw.slice(0,i).reduce((a,b)=>a+b,0);
-      doc.font(i===5?'Helvetica-Bold':'Helvetica').fontSize(i===0?10:9)
+      doc.font('CJK').fontSize(i===0?10:9)
          .fillColor(pdf.C.dark)
          .text(row[i]||'',x+5,ry+5,{width:w-8,lineBreak:false,align:i>=2?'center':'left'});
     });
@@ -682,9 +682,9 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   const taxRate=parseFloat(q.tax_rate||5);
   const sub=parseFloat(q.subtotal||0), tax=parseFloat(q.tax_amount||0), tot=parseFloat(q.total||0);
   [[`小計 SUBTOTAL`,pdf.money(sub)],[`稅金 TAX (${taxRate}%)`,pdf.money(tax)]].forEach(([l,v])=>{
-    doc.font('Helvetica').fontSize(8.5).fillColor(pdf.C.sub)
+    doc.font('CJK').fontSize(8.5).fillColor(pdf.C.sub)
        .text(l,0,doc.y,{width:pdf.W-pdf.RM-2,align:'right',lineBreak:false});
-    doc.font('Helvetica').fontSize(10).fillColor(pdf.C.mid)
+    doc.font('CJK').fontSize(10).fillColor(pdf.C.mid)
        .text(v,0,doc.y-doc.currentLineHeight(),{width:pdf.W-pdf.RM-2,align:'right',lineBreak:false});
     doc.y+=15;
   });
@@ -692,9 +692,9 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   const totY=doc.y;
   doc.rect(pdf.LM,totY,pdf.CW,26).fillAndStroke(pdf.C.label,pdf.C.acc);
   doc.rect(pdf.LM,totY,pdf.CW-1,1.5).fill(pdf.C.acc);
-  doc.font('Helvetica-Bold').fontSize(12).fillColor(pdf.C.dark)
+  doc.font('CJK').fontSize(12).fillColor(pdf.C.dark)
      .text('報價總金額 TOTAL',pdf.LM+12,totY+7,{lineBreak:false});
-  doc.font('Helvetica-Bold').fontSize(15).fillColor(pdf.C.acc)
+  doc.font('CJK').fontSize(15).fillColor(pdf.C.acc)
      .text(pdf.money(tot),0,totY+5,{width:pdf.W-pdf.RM-10,align:'right',lineBreak:false});
   doc.y=totY+32;
 
@@ -840,10 +840,10 @@ router.get('/invoices/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   brows.forEach((row,i)=>{
     const rh=i===0?18:20; const bg=i===0?pdf.C.dark:(i%2===0?pdf.C.row:pdf.C.white);
     doc.rect(pdf.LM,btY,pdf.CW,rh).fill(bg);
-    doc.font(i===0?'Helvetica':'Helvetica').fontSize(i===0?8.5:10)
+    doc.font('CJK').fontSize(i===0?8.5:10)
        .fillColor(i===0?pdf.C.sub:pdf.C.dark)
        .text(row[0],pdf.LM+8,btY+(i===0?5:5),{lineBreak:false});
-    doc.font(i===0?'Helvetica':'Helvetica').fontSize(i===0?8.5:10)
+    doc.font('CJK').fontSize(i===0?8.5:10)
        .fillColor(i===0?pdf.C.sub:pdf.C.dark)
        .text(row[1],0,btY+(i===0?5:5),{width:pdf.W-pdf.RM-10,align:'right',lineBreak:false});
     if(i>0) doc.rect(pdf.LM,btY+rh-0.3,pdf.CW,0.3).fill(pdf.C.border);
@@ -856,9 +856,9 @@ router.get('/invoices/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   const tY=doc.y;
   doc.rect(pdf.LM,tY,pdf.CW,30).fillAndStroke(pdf.C.label,pdf.C.acc);
   doc.rect(pdf.LM,tY,5,30).fill(pdf.C.acc);
-  doc.font('Helvetica-Bold').fontSize(12).fillColor(pdf.C.dark)
+  doc.font('CJK').fontSize(12).fillColor(pdf.C.dark)
      .text('請  款  總  金  額',pdf.LM+14,tY+9,{lineBreak:false});
-  doc.font('Helvetica-Bold').fontSize(18).fillColor(pdf.C.acc)
+  doc.font('CJK').fontSize(18).fillColor(pdf.C.acc)
      .text(pdf.money(inv.total_amount),0,tY+6,{width:pdf.W-pdf.RM-10,align:'right',lineBreak:false});
   doc.y=tY+38;
 
@@ -1016,11 +1016,11 @@ router.get('/closures/:id/pdf', authenticate, asyncHandler(async (req, res) => {
       const rh=48; const y=doc.y;
       doc.rect(pdf.LM,y,10,rh).fill(pdf.C.acc);
       doc.rect(pdf.LM+10,y,pdf.CW-10,rh).fill(i%2===0?pdf.C.row:pdf.C.white);
-      doc.font('Helvetica-Bold').fontSize(10).fillColor(pdf.C.white)
+      doc.font('CJK').fontSize(10).fillColor(pdf.C.white)
          .text(String(i+1),pdf.LM,y+17,{width:10,align:'center',lineBreak:false});
-      doc.font('Helvetica').fontSize(8).fillColor(pdf.C.sub)
+      doc.font('CJK').fontSize(8).fillColor(pdf.C.sub)
          .text(`${pdf.fmt(note.created_at)}  ·  ${note.author_name||'—'}`,pdf.LM+18,y+6,{lineBreak:false});
-      doc.font('Helvetica').fontSize(10).fillColor(pdf.C.dark)
+      doc.font('CJK').fontSize(10).fillColor(pdf.C.dark)
          .text(note.content||'',pdf.LM+18,y+20,{width:pdf.CW-28,lineBreak:true});
       doc.rect(pdf.LM,y+rh-0.3,pdf.CW,0.3).fill(pdf.C.border);
       doc.y=y+rh;
@@ -1112,56 +1112,56 @@ router.get('/receipts/:id/pdf', authenticate, asyncHandler(async (req, res) => {
   if (!rec.rows.length) return res.status(404).json({ error: '收款單不存在' });
   const receipt = rec.rows[0];
 
-  return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ margin: 0, size: 'A4' });
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${receipt.receipt_number}.pdf"`);
-    doc.pipe(res);
+  const company = req.query.company || '皇祥工程設計';
+  await pdf.ensureChineseFont();
+  const fontPath = await pdf.ensureChineseFont();
+  const doc = pdf.newDoc(fontPath);
+  const chunks = [];
+  doc.on('data', c => chunks.push(c));
 
-    drawTechHeader(doc, '收 款 單', 'RECEIPT', receipt.receipt_number);
-    doc.y = 115;
-
-    drawSectionHeader(doc, '客戶資訊');
-    let infoY = doc.y;
-    drawInfoRow(doc, '業主 / 公司', receipt.owner_company || receipt.owner_name, 40, 40, infoY);
-    drawInfoRow(doc, '聯絡人', receipt.owner_name, 40, 40, infoY + 14);
-    drawInfoRow(doc, '電話', receipt.owner_phone, 40, 40, infoY + 28);
-    drawInfoRow(doc, '關聯案件', receipt.case_number, 280, 280, infoY);
-    drawInfoRow(doc, '關聯請款單', receipt.invoice_number, 280, 280, infoY + 14);
-    drawInfoRow(doc, '收款日期', receipt.payment_date ? new Date(receipt.payment_date).toLocaleDateString('zh-TW') : '--', 280, 280, infoY + 28);
-    doc.y = infoY + 52;
-
-    drawSectionHeader(doc, '收款資訊');
-    let payY = doc.y;
-    drawInfoRow(doc, '付款方式', receipt.payment_method, 40, 40, payY);
-    drawInfoRow(doc, '交易編號', receipt.reference_number || '--', 40, 40, payY + 14);
-    drawInfoRow(doc, '入帳帳號', receipt.bank_account || '--', 40, 40, payY + 28);
-    doc.y = payY + 50;
-
-    // Amount box
-    doc.y += 8;
-    doc.save();
-    doc.roundedRect(350, doc.y, 205, 32, 4).fill(TECH_COLORS.primary);
-    doc.fillColor(TECH_COLORS.white).fontSize(10).font('Helvetica').text('實收金額', 360, doc.y + 10);
-    doc.fontSize(14).font('Helvetica-Bold').text(`$${Number(receipt.amount).toLocaleString()}`, 360, doc.y + 10, { align: 'right', width: 185 });
-    doc.restore();
-    doc.y += 44;
-
-    if (receipt.notes) {
-      drawSectionHeader(doc, '備注事項');
-      doc.fillColor(TECH_COLORS.text).fontSize(9).font('Helvetica')
-         .text(receipt.notes, 48, doc.y + 4, { width: 507 });
-    }
-
-    doc.save();
-    doc.rect(0, 800, 595, 42).fill(TECH_COLORS.dark);
-    doc.fillColor(TECH_COLORS.gray).fontSize(8)
-       .text('此收款單由 皇祥工程設計 維修管理系統自動產生  ·  如有疑問請聯繫客服', 40, 812, { align: 'center', width: 515 });
-    doc.restore();
-
-    doc.end();
-    resolve();
+  pdf.drawPage(doc, {
+    titleZh: '收  款  單', titleEn: 'RECEIPT',
+    docNumber: receipt.receipt_number,
+    dateStr: pdf.fmt(receipt.payment_date || receipt.created_at),
+    company,
   });
+
+  pdf.sectionLabel(doc, 'CLIENT INFORMATION');
+  pdf.clientBlock(doc, [
+    { label:'業主 / 公司', value: receipt.owner_company||receipt.owner_name, label2:'案件編號',   value2: receipt.case_number||'—' },
+    { label:'聯  絡  人',  value: receipt.owner_name,                        label2:'關聯請款單', value2: receipt.invoice_number||'—' },
+    { label:'電      話',  value: receipt.owner_phone||'—',                  label2:'收款日期',   value2: pdf.fmt(receipt.payment_date) },
+  ]);
+
+  doc.y += 6;
+  pdf.sectionLabel(doc, 'PAYMENT INFORMATION');
+  pdf.clientBlock(doc, [
+    { label:'付款方式', value: receipt.payment_method||'—', label2:'交易編號', value2: receipt.reference_number||'—' },
+    { label:'入帳帳號', value: receipt.bank_account||'—',  label2:'',         value2: '' },
+  ]);
+
+  doc.y += 8;
+  // 實收金額大框
+  const amtY = doc.y;
+  doc.rect(pdf.LM, amtY, pdf.CW, 36).fillAndStroke(pdf.C.label, pdf.C.acc);
+  doc.rect(pdf.LM, amtY, 5, 36).fill(pdf.C.acc);
+  doc.font('CJK').fontSize(12).fillColor(pdf.C.dark)
+     .text('實  收  金  額', pdf.LM+14, amtY+11, {lineBreak:false});
+  doc.font('CJK').fontSize(20).fillColor(pdf.C.acc)
+     .text(pdf.money(receipt.amount), 0, amtY+8, {width:pdf.W-pdf.RM-10, align:'right', lineBreak:false});
+  doc.y = amtY + 44;
+
+  if (receipt.notes) {
+    doc.y += 4;
+    pdf.notesBlock(doc, receipt.notes);
+  }
+
+  doc.end();
+  await new Promise(r => doc.on('end', r));
+  const buf = Buffer.concat(chunks);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="${receipt.receipt_number}.pdf"`);
+  res.end(buf);
 }));
 
 // Payment records
