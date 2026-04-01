@@ -684,25 +684,38 @@ router.get('/quotations/:id/pdf', authenticate, asyncHandler(async (req, res) =>
   doc.rect(pdf.LM,ty,pdf.CW,doc.y-ty).stroke(pdf.C.border);
   doc.y+=5;
 
-  // 合計
+  // 合計區
   const taxRate=parseFloat(q.tax_rate||5);
   const sub=parseFloat(q.subtotal||0), tax=parseFloat(q.tax_amount||0), tot=parseFloat(q.total||0);
-  [[`小計 SUBTOTAL`,pdf.money(sub)],[`稅金 TAX (${taxRate}%)`,pdf.money(tax)]].forEach(([l,v])=>{
-    doc.font('CJK').fontSize(8.5).fillColor(pdf.C.sub)
-       .text(l,0,doc.y,{width:pdf.W-pdf.RM-2,align:'right',lineBreak:false});
-    doc.font('CJK').fontSize(10).fillColor(pdf.C.mid)
-       .text(v,0,doc.y-doc.currentLineHeight(),{width:pdf.W-pdf.RM-2,align:'right',lineBreak:false});
-    doc.y+=15;
-  });
+
+  doc.y += 4;
+  // 小計列
+  const row1Y = doc.y;
+  doc.rect(pdf.LM, row1Y, pdf.CW, 18).fill(pdf.C.row);
+  doc.font('CJK').fontSize(8.5).fillColor(pdf.C.sub)
+     .text('小計 SUBTOTAL', pdf.LM+8, row1Y+5, {width:pdf.CW*0.6, lineBreak:false});
+  doc.font('CJK').fontSize(9.5).fillColor(pdf.C.mid)
+     .text(pdf.money(sub), pdf.LM+8, row1Y+4, {width:pdf.CW-16, align:'right', lineBreak:false});
+  doc.rect(pdf.LM, row1Y+17.6, pdf.CW, 0.4).fill(pdf.C.border);
+
+  // 稅金列
+  const row2Y = row1Y + 18;
+  doc.rect(pdf.LM, row2Y, pdf.CW, 18).fill(pdf.C.white);
+  doc.font('CJK').fontSize(8.5).fillColor(pdf.C.sub)
+     .text(`稅金 TAX (${taxRate}%)`, pdf.LM+8, row2Y+5, {width:pdf.CW*0.6, lineBreak:false});
+  doc.font('CJK').fontSize(9.5).fillColor(pdf.C.mid)
+     .text(pdf.money(tax), pdf.LM+8, row2Y+4, {width:pdf.CW-16, align:'right', lineBreak:false});
+  doc.rect(pdf.LM, row2Y+17.6, pdf.CW, 0.4).fill(pdf.C.border);
+
   // 總計框
-  const totY=doc.y;
-  doc.rect(pdf.LM,totY,pdf.CW,26).fillAndStroke(pdf.C.label,pdf.C.acc);
-  doc.rect(pdf.LM,totY,pdf.CW-1,1.5).fill(pdf.C.acc);
-  doc.font('CJK').fontSize(12).fillColor(pdf.C.dark)
-     .text('報價總金額 TOTAL',pdf.LM+12,totY+7,{lineBreak:false});
+  const totY = row2Y + 18 + 2;
+  doc.rect(pdf.LM, totY, pdf.CW, 28).fillAndStroke(pdf.C.label, pdf.C.acc);
+  doc.rect(pdf.LM, totY, pdf.CW-1, 1.5).fill(pdf.C.acc);
+  doc.font('CJK').fontSize(11).fillColor(pdf.C.dark)
+     .text('報價總金額 TOTAL', pdf.LM+12, totY+8, {width:pdf.CW*0.5, lineBreak:false});
   doc.font('CJK').fontSize(15).fillColor(pdf.C.acc)
-     .text(pdf.money(tot),0,totY+5,{width:pdf.W-pdf.RM-10,align:'right',lineBreak:false});
-  doc.y=totY+32;
+     .text(pdf.money(tot), pdf.LM+8, totY+6, {width:pdf.CW-16, align:'right', lineBreak:false});
+  doc.y = totY + 34;
 
   if (q.notes) { pdf.notesBlock(doc, q.notes); }
 
