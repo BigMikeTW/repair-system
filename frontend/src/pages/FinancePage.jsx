@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm, useFieldArray } from 'react-hook-form';
 import {
   Plus, Trash2, Download, FileText, Receipt, CheckSquare, CreditCard,
-  Edit2, X, AlertTriangle, Lock, Info, ExternalLink
+  Edit2, X, AlertTriangle, Lock, Info, ExternalLink, Printer
 } from 'lucide-react';
 import { financeAPI, casesAPI } from '../utils/api';
 import { formatDate, formatMoney, INV_STATUS_LABELS, INV_STATUS_BADGES, PAYMENT_METHODS } from '../utils/helpers';
@@ -661,7 +661,7 @@ export default function FinancePage() {
                         <Edit2 size={12} />
                       </button>
                       <button className="btn btn-sm gap-1" onClick={() => openPdf('報價單', financeAPI.quotationPdf(q.id), 'quotation')}>
-                        <Download size={12} /> PDF
+                        <Printer size={12} /> 輸出
                       </button>
                       <button className="btn btn-sm text-danger border-red-200" onClick={() => handleDelete('quotation', q.id, q.quote_number)}>
                         <Trash2 size={12} />
@@ -704,7 +704,7 @@ export default function FinancePage() {
                         <Edit2 size={12} />
                       </button>
                       <button className="btn btn-sm gap-1" onClick={() => openPdf('請款單', financeAPI.invoicePdf(inv.id), 'invoice')}>
-                        <Download size={12} /> PDF
+                        <Printer size={12} /> 輸出
                       </button>
                       <button className="btn btn-sm text-danger border-red-200" onClick={() => handleDelete('invoice', inv.id, inv.invoice_number)}>
                         <Trash2 size={12} />
@@ -743,7 +743,7 @@ export default function FinancePage() {
                         <Edit2 size={12} />
                       </button>
                       <button className="btn btn-sm gap-1" onClick={() => openPdf('收款單', financeAPI.receiptPdf(rec.id), 'receipt')}>
-                        <Download size={12} /> PDF
+                        <Printer size={12} /> 輸出
                       </button>
                       <button className="btn btn-sm text-danger border-red-200" onClick={() => handleDelete('receipt', rec.id, rec.receipt_number)}>
                         <Trash2 size={12} />
@@ -785,7 +785,7 @@ export default function FinancePage() {
                         </button>
                         <button className="btn btn-sm gap-1"
                           onClick={() => openPdf('結案報告', financeAPI.closurePdf(cr.id), 'closure')}>
-                          <Download size={12} /> PDF
+                          <Printer size={12} /> 輸出
                         </button>
                         <button className="btn btn-sm text-danger border-red-200"
                           onClick={() => setCancelClosure(cr)}>

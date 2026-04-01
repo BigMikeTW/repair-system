@@ -8,47 +8,40 @@ const PDFDocument = require('pdfkit');
 const fs   = require('fs');
 const path = require('path');
 
-// ── 字型設定（Alpine Linux + font-noto-cjk）─────────────────
-// PDFKit 只支援 .ttf 或 .otf，不支援 .ttc（TrueType Collection）
+// ── 字型設定 ─────────────────────────────────────────────────
+// 使用 Noto Sans TC .ttf（Dockerfile 在 Build 時直接下載至 /app/fonts/）
 const FONT_PATHS = [
-  '/tmp/CJK.otf',    // Dockerfile 預先複製的 Noto CJK OTF
-  '/tmp/WQY.ttf',    // 備用
-  // Noto CJK OTF 路徑
-  '/usr/share/fonts/noto-cjk/NotoSansCJKtc-Regular.otf',
-  '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+  '/app/fonts/NotoSansTC.ttf',   // 主要：Dockerfile 下載
+  path.join(__dirname, '../../fonts/NotoSansTC.ttf'),  // 備用相對路徑
+  '/tmp/WQY.ttf',
 ];
 
 let FONT_REGULAR = null;
 for (const fp of FONT_PATHS) {
   if (fs.existsSync(fp)) {
-    // 確認不是 .ttc（PDFKit 不支援）
-    if (fp.endsWith('.ttc')) {
-      console.warn('[PDF] Skipping .ttc font (not supported by PDFKit):', fp);
-      continue;
-    }
     FONT_REGULAR = fp;
     console.log('[PDF] Using font:', fp);
     break;
   }
 }
 if (!FONT_REGULAR) {
-  console.warn('[PDF] No CJK font found, will use Helvetica (no Chinese rendering)');
+  console.warn('[PDF] No CJK font found, PDF text will not render correctly');
 }
 
-// 確保中文字型可用（PDFKit 只支援 .ttf/.otf，不支援 .ttc）
+// 確保中文字型可用
 async function ensureChineseFont() {
   if (FONT_REGULAR) return FONT_REGULAR;
 
   const tryPaths = [
-    '/tmp/CJK.otf',
+    '/app/fonts/NotoSansTC.ttf',
+    path.join(__dirname, '../../fonts/NotoSansTC.ttf'),
     '/tmp/WQY.ttf',
-    '/usr/share/fonts/noto-cjk/NotoSansCJKtc-Regular.otf',
   ];
 
   for (const fp of tryPaths) {
-    if (fs.existsSync(fp) && !fp.endsWith('.ttc')) {
+    if (fs.existsSync(fp)) {
       FONT_REGULAR = fp;
-      console.log('[PDF] Found font at runtime:', fp);
+      console.log('[PDF] Font found at runtime:', fp);
       return fp;
     }
   }

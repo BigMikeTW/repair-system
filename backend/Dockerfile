@@ -2,15 +2,15 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# 安裝 PostgreSQL client、字型工具及 Noto CJK 字型
-RUN apk add --no-cache postgresql-client fontconfig font-noto-cjk
+# 安裝基本工具
+RUN apk add --no-cache postgresql-client wget ca-certificates
 
-# 找出可用的 CJK 字型並複製到 /tmp/CJK.otf 供 PDFKit 使用
-RUN FONT=$(find /usr/share/fonts -name "NotoSansCJK*.otf" -o -name "NotoSansCJK*.ttf" 2>/dev/null | head -1) && \
-    if [ -n "$FONT" ]; then cp "$FONT" /tmp/CJK.otf && echo "Font copied: $FONT"; \
-    else echo "Noto CJK not found, trying other paths" && \
-         find /usr/share/fonts -name "*.otf" | grep -i "cjk\|noto\|han" | head -1 | xargs -I{} cp {} /tmp/CJK.otf || true; fi && \
-    ls -la /tmp/CJK.otf 2>/dev/null || echo "WARNING: No CJK font available"
+# 直接下載 Noto Sans TC 繁體中文字型（.ttf 格式，PDFKit 完全支援）
+RUN mkdir -p /app/fonts && \
+    wget -q "https://github.com/google/fonts/raw/main/ofl/notosanstc/NotoSansTC-Regular.ttf" \
+         -O /app/fonts/NotoSansTC.ttf && \
+    echo "Font size: $(wc -c < /app/fonts/NotoSansTC.ttf) bytes" && \
+    ls -la /app/fonts/
 
 COPY package*.json ./
 RUN npm ci --only=production
