@@ -9,44 +9,67 @@ const fs   = require('fs');
 const path = require('path');
 
 // ── 字型設定 ─────────────────────────────────────────────────
-// 使用 Noto Sans TC .ttf（Dockerfile 在 Build 時直接下載至 /app/fonts/）
+console.log('[PDF-FONT] ── 字型診斷開始 ──');
+console.log('[PDF-FONT] __dirname:', __dirname);
+
 const FONT_PATHS = [
-  '/app/fonts/NotoSansTC.ttf',   // 主要：Dockerfile 下載
-  path.join(__dirname, '../../fonts/NotoSansTC.ttf'),  // 備用相對路徑
-  '/tmp/WQY.ttf',
+  '/app/fonts/NotoSansTC.ttf',
+  path.join(__dirname, '../../fonts/NotoSansTC.ttf'),
+  path.join(__dirname, '../../../fonts/NotoSansTC.ttf'),
+  '/tmp/NotoSansTC.ttf',
 ];
+
+// 列出所有候選路徑的狀態
+FONT_PATHS.forEach(fp => {
+  const exists = fs.existsSync(fp);
+  if (exists) {
+    const size = fs.statSync(fp).size;
+    console.log(`[PDF-FONT] FOUND  : ${fp} (${size} bytes)`);
+  } else {
+    console.log(`[PDF-FONT] MISSING: ${fp}`);
+  }
+});
+
+// 列出 /app/fonts/ 資料夾內容
+try {
+  const files = fs.readdirSync('/app/fonts');
+  console.log('[PDF-FONT] /app/fonts contents:', files);
+} catch(e) {
+  console.log('[PDF-FONT] /app/fonts not found:', e.message);
+}
 
 let FONT_REGULAR = null;
 for (const fp of FONT_PATHS) {
   if (fs.existsSync(fp)) {
     FONT_REGULAR = fp;
-    console.log('[PDF] Using font:', fp);
+    console.log('[PDF-FONT] ✅ Using font:', fp);
     break;
   }
 }
 if (!FONT_REGULAR) {
-  console.warn('[PDF] No CJK font found, PDF text will not render correctly');
+  console.warn('[PDF-FONT] ❌ No CJK font found! PDF will show garbled text.');
 }
+console.log('[PDF-FONT] ── 字型診斷結束 ──');
 
-// 確保中文字型可用
 async function ensureChineseFont() {
   if (FONT_REGULAR) return FONT_REGULAR;
 
   const tryPaths = [
     '/app/fonts/NotoSansTC.ttf',
     path.join(__dirname, '../../fonts/NotoSansTC.ttf'),
-    '/tmp/WQY.ttf',
+    path.join(__dirname, '../../../fonts/NotoSansTC.ttf'),
+    '/tmp/NotoSansTC.ttf',
   ];
 
   for (const fp of tryPaths) {
     if (fs.existsSync(fp)) {
       FONT_REGULAR = fp;
-      console.log('[PDF] Font found at runtime:', fp);
+      console.log('[PDF-FONT] Runtime found:', fp);
       return fp;
     }
   }
 
-  console.warn('[PDF] No CJK font found');
+  console.warn('[PDF-FONT] ❌ No CJK font found at runtime');
   return null;
 }
 
@@ -202,7 +225,7 @@ function timeRecord(doc, dates) {
   labels.forEach((lbl,i) => {
     const x = LM + i*colW;
     if (i>0) doc.rect(x,y,0.5,h).fill(C.border);
-    doc.font('Helvetica').fontSize(7.5).fillColor(C.sub)
+    doc.font('CJK').fontSize(7.5).fillColor(C.sub)
        .text(lbl, x, y+7, {width:colW,align:'center',lineBreak:false});
     const hasVal = vals[i]!=='—';
     setFont(doc,true,10,hasVal?C.acc:C.sub);
