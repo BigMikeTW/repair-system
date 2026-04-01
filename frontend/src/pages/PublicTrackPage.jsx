@@ -136,9 +136,9 @@ export default function PublicTrackPage() {
               <div className="px-5 pb-5 space-y-3 border-t border-gray-50 pt-4">
                 <div className="flex items-start gap-3">
                   <MapPin size={15} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-xs text-gray-400">施工地點</div>
-                    <div className="text-sm text-gray-800">{caseData.location_address || '--'}</div>
+                    <div className="text-sm text-gray-800 break-words">{caseData.location_address || '--'}</div>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

@@ -91,13 +91,13 @@ export default function SignPage() {
             <div className="text-gray-500">案件編號</div>
             <div className="font-medium">{c.case_number}</div>
             <div className="text-gray-500">業主/公司</div>
-            <div>{c.owner_company || c.owner_name || '--'}</div>
+            <div className="break-words">{c.owner_company || c.owner_name || '--'}</div>
             <div className="text-gray-500">工程類型</div>
-            <div>{c.case_type}</div>
+            <div className="break-words">{c.case_type}</div>
             <div className="text-gray-500">施工地點</div>
-            <div className="col-span-1 text-xs">{c.location_address}</div>
+            <div className="col-span-1 text-xs break-words">{c.location_address}</div>
             <div className="text-gray-500">負責工程師</div>
-            <div>{c.engineer_name || '--'}</div>
+            <div className="break-words">{c.engineer_name || '--'}</div>
             {c.checkin_time && (
               <>
                 <div className="text-gray-500">到場時間</div>

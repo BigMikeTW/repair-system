@@ -56,7 +56,14 @@ router.get('/:userId', authenticate, asyncHandler(async (req, res) => {
 
 // PUT /api/hr/:userId/profile
 router.put('/:userId/profile', authenticate, authorize('admin','customer_service'), asyncHandler(async (req, res) => {
-  const { id_number, birth_date, address, emergency_contact, emergency_phone, hire_date, department } = req.body;
+  let { id_number, birth_date, address, emergency_contact, emergency_phone, hire_date, department } = req.body;
+
+  // ── 長度保護 ──────────────────────────────────────────────────
+  id_number         = id_number         ? String(id_number).trim().slice(0, 20)  : null;
+  address           = address           ? String(address).trim()                  : null;
+  emergency_contact = emergency_contact ? String(emergency_contact).trim().slice(0, 100) : null;
+  emergency_phone   = emergency_phone   ? String(emergency_phone).trim().slice(0, 20)    : null;
+  department        = department        ? String(department).trim().slice(0, 100) : null;
 
   const result = await query(`
     UPDATE users SET
@@ -66,9 +73,9 @@ router.put('/:userId/profile', authenticate, authorize('admin','customer_service
     WHERE id = $8
     RETURNING id, name, id_number, birth_date, address, emergency_contact, emergency_phone, hire_date, department
   `, [
-    id_number || null, birth_date || null, address || null,
-    emergency_contact || null, emergency_phone || null,
-    hire_date || null, department || null,
+    id_number, birth_date || null, address,
+    emergency_contact, emergency_phone,
+    hire_date || null, department,
     req.params.userId
   ]);
 
@@ -105,15 +112,17 @@ router.post('/:userId/licenses', authenticate, authorize('admin','customer_servi
     if (!license_name?.trim()) return res.status(400).json({ error: '證照名稱必填' });
 
     const fileUrl = req.file ? `/uploads/hr/${req.params.userId}/${req.file.filename}` : null;
-    const fileName = req.file ? req.file.originalname : null;
+    const fileName = req.file ? String(req.file.originalname).slice(0, 255) : null;
 
     const result = await query(`
       INSERT INTO user_licenses
         (user_id, license_name, license_number, issued_by, issue_date, expiry_date, file_url, file_name, notes)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *
     `, [
-      req.params.userId, license_name.trim(),
-      license_number || null, issued_by || null,
+      req.params.userId,
+      String(license_name).trim().slice(0, 200),
+      license_number ? String(license_number).trim().slice(0, 100) : null,
+      issued_by ? String(issued_by).trim().slice(0, 200) : null,
       issue_date || null, expiry_date || null,
       fileUrl, fileName, notes || null
     ]);
@@ -134,7 +143,7 @@ router.put('/:userId/licenses/:licenseId', authenticate, authorize('admin','cust
     let fileName = existing.rows[0].file_name;
     if (req.file) {
       fileUrl = `/uploads/hr/${req.params.userId}/${req.file.filename}`;
-      fileName = req.file.originalname;
+      fileName = String(req.file.originalname).slice(0, 255);
     }
 
     const result = await query(`
@@ -143,7 +152,9 @@ router.put('/:userId/licenses/:licenseId', authenticate, authorize('admin','cust
         issue_date=$4, expiry_date=$5, file_url=$6, file_name=$7, notes=$8, updated_at=NOW()
       WHERE id=$9 AND user_id=$10 RETURNING *
     `, [
-      license_name.trim(), license_number || null, issued_by || null,
+      String(license_name).trim().slice(0, 200),
+      license_number ? String(license_number).trim().slice(0, 100) : null,
+      issued_by ? String(issued_by).trim().slice(0, 200) : null,
       issue_date || null, expiry_date || null, fileUrl, fileName,
       notes || null, req.params.licenseId, req.params.userId
     ]);

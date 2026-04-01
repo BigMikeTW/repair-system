@@ -144,6 +144,14 @@ function QuotationForm({ onClose, onSuccess, editData }) {
       : { tax_rate: TAX_RATE, items: [{ item_name: '', description: '', quantity: 1, unit: '', unit_price: 0 }] }
   });
 
+  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
+  const watchItems = watch('items');
+  const subtotal = watchItems.reduce((s, i) => s + (parseFloat(i.unit_price)||0)*(parseFloat(i.quantity)||0), 0);
+  const taxRate = parseFloat(watch('tax_rate')) || TAX_RATE;
+  const tax = subtotal * (taxRate / 100);
+
+  const { data: cases } = useQuery('allCasesForQuote', () => casesAPI.list({ limit: 200 }).then(r => r.data));
+
   if (editData && !initialized) {
     return (
       <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
@@ -153,13 +161,6 @@ function QuotationForm({ onClose, onSuccess, editData }) {
       </div>
     );
   }
-  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
-  const watchItems = watch('items');
-  const subtotal = watchItems.reduce((s, i) => s + (parseFloat(i.unit_price)||0)*(parseFloat(i.quantity)||0), 0);
-  const taxRate = parseFloat(watch('tax_rate')) || TAX_RATE;
-  const tax = subtotal * (taxRate / 100);
-
-  const { data: cases } = useQuery('allCasesForQuote', () => casesAPI.list({ limit: 200 }).then(r => r.data));
 
   const onSubmit = async (data) => {
     try {
@@ -642,7 +643,7 @@ export default function FinancePage() {
                 <tr key={q.id}>
                   <td className="font-mono text-primary font-medium text-sm">{q.quote_number}</td>
                   <td className="text-sm">{q.case_number||'—'}</td>
-                  <td>{q.owner_company||'—'}</td>
+                  <td className="max-w-[120px]"><div className="truncate text-sm" title={q.owner_company||''}>{q.owner_company||'—'}</div></td>
                   <td className="font-medium">{formatMoney(q.total)}</td>
                   <td className="text-sm text-gray-400">{formatDate(q.valid_until)}</td>
                   <td>
@@ -688,7 +689,7 @@ export default function FinancePage() {
                 <tr key={inv.id}>
                   <td className="font-mono text-primary font-medium text-sm">{inv.invoice_number}</td>
                   <td className="text-sm">{inv.case_number||'—'}</td>
-                  <td>{inv.owner_company||inv.owner_name||'—'}</td>
+                  <td className="max-w-[120px]"><div className="truncate text-sm" title={inv.owner_company||inv.owner_name||''}>{inv.owner_company||inv.owner_name||'—'}</div></td>
                   <td className="font-medium">{formatMoney(inv.total_amount)}</td>
                   <td className="text-sm text-gray-400">{formatDate(inv.due_date)}</td>
                   <td>
@@ -731,7 +732,7 @@ export default function FinancePage() {
                 <tr key={rec.id}>
                   <td className="font-mono text-primary font-medium text-sm">{rec.receipt_number}</td>
                   <td className="text-sm">{rec.invoice_number||'—'}</td>
-                  <td>{rec.owner_company||'—'}</td>
+                  <td className="max-w-[120px]"><div className="truncate text-sm" title={rec.owner_company||''}>{rec.owner_company||'—'}</div></td>
                   <td className="font-medium text-green-600">{formatMoney(rec.amount)}</td>
                   <td className="text-sm">{rec.payment_method}</td>
                   <td className="text-sm text-gray-500 max-w-[100px]"><div className="truncate">{rec.bank_account||'—'}</div></td>
@@ -770,7 +771,7 @@ export default function FinancePage() {
                 <tr key={cr.id} className={cr.is_cancelled ? 'bg-red-50/50' : ''}>
                   <td className="font-mono text-primary font-medium text-sm">{cr.closure_number}</td>
                   <td className="text-sm">{cr.case_number||'—'}</td>
-                  <td>{cr.owner_company||cr.owner_name||'—'}</td>
+                  <td className="max-w-[120px]"><div className="truncate text-sm" title={cr.owner_company||cr.owner_name||''}>{cr.owner_company||cr.owner_name||'—'}</div></td>
                   <td className="text-sm text-gray-500 max-w-[160px]"><div className="truncate">{cr.summary||'—'}</div></td>
                   <td className="text-sm text-gray-400">{formatDate(cr.created_at)}</td>
                   <td>

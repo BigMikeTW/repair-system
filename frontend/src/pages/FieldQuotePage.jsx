@@ -121,10 +121,10 @@ export default function FieldQuotePage() {
               <tbody>
                 {quoteData.items.map((item, i) => (
                   <tr key={i} className="border-b border-gray-100">
-                    <td className="py-1.5">{item.item_name}</td>
-                    <td className="py-1.5 text-right text-gray-500">{item.quantity}{item.unit}</td>
-                    <td className="py-1.5 text-right text-gray-500">{formatMoney(item.unit_price)}</td>
-                    <td className="py-1.5 text-right">{formatMoney((parseFloat(item.unit_price) || 0) * (parseFloat(item.quantity) || 0))}</td>
+                    <td className="py-1.5 break-words max-w-[160px]">{item.item_name}</td>
+                    <td className="py-1.5 text-right text-gray-500 whitespace-nowrap">{item.quantity}{item.unit}</td>
+                    <td className="py-1.5 text-right text-gray-500 whitespace-nowrap">{formatMoney(item.unit_price)}</td>
+                    <td className="py-1.5 text-right whitespace-nowrap">{formatMoney((parseFloat(item.unit_price) || 0) * (parseFloat(item.quantity) || 0))}</td>
                   </tr>
                 ))}
               </tbody>

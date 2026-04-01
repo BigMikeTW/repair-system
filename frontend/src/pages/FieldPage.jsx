@@ -368,12 +368,12 @@ export default function FieldPage() {
               {/* 案件標題 */}
               <div className="card card-body mb-4">
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-xs text-primary font-mono font-medium">{activeCase.case_number}</div>
-                    <div className="text-base font-semibold text-gray-900 mt-0.5">{activeCase.title}</div>
+                    <div className="text-base font-semibold text-gray-900 mt-0.5 break-words">{activeCase.title}</div>
                     <div className="flex items-start gap-1.5 mt-1 text-sm text-gray-500">
                       <MapPin size={14} className="mt-0.5 flex-shrink-0 text-gray-400" />
-                      {activeCase.location_address}
+                      <span className="break-words">{activeCase.location_address}</span>
                     </div>
                   </div>
                   <span className={`badge flex-shrink-0 ${activeCase.status === 'in_progress' ? 'badge-teal' : 'badge-primary'}`}>

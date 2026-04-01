@@ -72,7 +72,7 @@ export default function DashboardPage() {
                 <span className={`badge ${URGENCY_BADGES[c.urgency]} mt-0.5 flex-shrink-0`}>{URGENCY_LABELS[c.urgency]}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-900 truncate">{c.title}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{c.case_number} · {c.owner_company || c.owner_name} · {formatDateTime(c.created_at)}</div>
+                  <div className="text-xs text-gray-400 mt-0.5 truncate">{c.case_number} · {c.owner_company || c.owner_name} · {formatDateTime(c.created_at)}</div>
                 </div>
                 <span className={`badge ${STATUS_BADGES[c.status]} flex-shrink-0`}>{STATUS_LABELS[c.status]}</span>
               </Link>

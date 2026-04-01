@@ -221,11 +221,11 @@ export default function CaseDetailPage() {
               )}
             </div>
             <div className="space-y-3 text-sm">
-              <div className="flex gap-2"><Building size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div><div className="text-xs text-gray-400">業主/公司</div><div>{c.owner_company || '--'}</div></div></div>
-              <div className="flex gap-2"><User size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div><div className="text-xs text-gray-400">聯絡人</div><div>{c.owner_name}</div></div></div>
-              <div className="flex gap-2"><Phone size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div><div className="text-xs text-gray-400">電話</div><div>{c.owner_phone || '--'}</div></div></div>
-              <div className="flex gap-2"><MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div><div className="text-xs text-gray-400">施工地點</div><div>{c.location_address}</div></div></div>
-              <div className="flex gap-2"><FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div><div className="text-xs text-gray-400">報修說明</div><div className="text-gray-700">{c.description}</div></div></div>
+              <div className="flex gap-2"><Building size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div className="min-w-0"><div className="text-xs text-gray-400">業主/公司</div><div className="break-words">{c.owner_company || '--'}</div></div></div>
+              <div className="flex gap-2"><User size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div className="min-w-0"><div className="text-xs text-gray-400">聯絡人</div><div className="break-words">{c.owner_name}</div></div></div>
+              <div className="flex gap-2"><Phone size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div className="min-w-0"><div className="text-xs text-gray-400">電話</div><div className="break-words">{c.owner_phone || '--'}</div></div></div>
+              <div className="flex gap-2"><MapPin size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div className="min-w-0"><div className="text-xs text-gray-400">施工地點</div><div className="break-words">{c.location_address}</div></div></div>
+              <div className="flex gap-2"><FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div className="min-w-0"><div className="text-xs text-gray-400">報修說明</div><div className="text-gray-700 break-words">{c.description}</div></div></div>
             </div>
           </div>
           <div className="space-y-4">

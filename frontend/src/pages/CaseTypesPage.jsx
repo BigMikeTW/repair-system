@@ -107,12 +107,12 @@ export default function CaseTypesPage() {
                         onCancel={() => setEditingId(null)}
                       />
                     ) : (
-                      <span className="text-sm font-medium">{type.name}</span>
+                      <span className="text-sm font-medium truncate max-w-[150px]">{type.name}</span>
                     )}
                   </td>
                   {editingId !== type.id && (
                     <>
-                      <td className="text-xs text-gray-400">{type.description || '--'}</td>
+                      <td className="text-xs text-gray-400 max-w-[200px]"><div className="truncate">{type.description || '--'}</div></td>
                       <td className="text-xs text-gray-400 text-center">{type.sort_order}</td>
                       <td>
                         <button

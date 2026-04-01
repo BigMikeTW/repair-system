@@ -596,9 +596,12 @@ router.put('/quotations/:id', authenticate, authorize('admin','customer_service'
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       const st = (parseFloat(item.unit_price)*parseFloat(item.quantity)).toFixed(2);
+      const itemName = String(item.item_name || '').trim().slice(0, 200);
+      const itemDesc = String(item.description || '').trim().slice(0, 500);
+      const itemUnit = String(item.unit || '').trim().slice(0, 20);
       await query(
         `INSERT INTO quotation_items (quotation_id,item_name,description,quantity,unit,unit_price,subtotal,sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        [req.params.id, item.item_name, item.description||'', item.quantity, item.unit||'', item.unit_price, st, i]
+        [req.params.id, itemName, itemDesc, item.quantity, itemUnit, item.unit_price, st, i]
       );
     }
     const items_r = await query(`SELECT * FROM quotation_items WHERE quotation_id=$1 ORDER BY sort_order`, [req.params.id]);

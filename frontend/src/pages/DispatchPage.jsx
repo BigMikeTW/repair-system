@@ -173,7 +173,7 @@ export default function DispatchPage() {
                     <span className={`badge ${STATUS_BADGES[c.status]}`}>{STATUS_LABELS[c.status]}</span>
                   </div>
                   <div className="text-sm font-medium text-gray-800 truncate">{c.title}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{c.location_address}</div>
+                  <div className="text-xs text-gray-400 mt-0.5 truncate">{c.location_address}</div>
                 </div>
                 <button className="btn btn-primary btn-sm flex-shrink-0" onClick={() => setSelectedCase(c)}>
                   派工
@@ -237,10 +237,16 @@ export default function DispatchPage() {
             <tbody>
               {activeDispatched.map(c => (
                 <tr key={c.id}>
-                  <td className="text-xs text-primary font-medium cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>{c.case_number}</td>
-                  <td className="text-sm cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>{c.title}</td>
-                  <td className="text-xs text-gray-500">{c.owner_company || c.owner_name}</td>
-                  <td className="text-xs">{c.engineer_name || '--'}</td>
+                  <td className="text-xs text-primary font-medium cursor-pointer whitespace-nowrap" onClick={() => window.location.href = `/cases/${c.id}`}>{c.case_number}</td>
+                  <td className="text-sm cursor-pointer max-w-[160px]" onClick={() => window.location.href = `/cases/${c.id}`}>
+                    <div className="truncate" title={c.title}>{c.title}</div>
+                  </td>
+                  <td className="text-xs text-gray-500 max-w-[120px]">
+                    <div className="truncate" title={c.owner_company || c.owner_name}>{c.owner_company || c.owner_name}</div>
+                  </td>
+                  <td className="text-xs max-w-[80px]">
+                    <div className="truncate">{c.engineer_name || '--'}</div>
+                  </td>
                   <td className="text-xs text-gray-400">{formatDateTime(c.scheduled_start)}</td>
                   <td>
                     {c.checkin_time

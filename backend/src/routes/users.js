@@ -60,32 +60,39 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
 }));
 
 router.post('/', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
-  const { name, email, password, phone, role, specialties } = req.body;
+  let { name, email, password, phone, role, specialties } = req.body;
   if (!name || !email || !password || !role)
     return res.status(400).json({ error: '姓名、Email、密碼、角色為必填' });
   if (password.length < 8)
     return res.status(400).json({ error: '密碼至少 8 碼' });
-  const exists = await query('SELECT id FROM users WHERE email=$1', [email.toLowerCase().trim()]);
+  // ── 長度保護 ──────────────────────────────────────────────────
+  name  = String(name).trim().slice(0, 100);
+  email = String(email).toLowerCase().trim().slice(0, 255);
+  phone = phone ? String(phone).trim().slice(0, 20) : null;
+  const exists = await query('SELECT id FROM users WHERE email=$1', [email]);
   if (exists.rows.length) return res.status(409).json({ error: 'Email 已存在' });
   const hashed = await bcrypt.hash(password, 12);
   const result = await query(
     `INSERT INTO users (name, email, password, phone, role, specialties) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, name, email, phone, role, specialties, is_active`,
-    [name, email.toLowerCase().trim(), hashed, phone || null, role, specialties || null]
+    [name, email, hashed, phone, role, specialties || null]
   );
   res.status(201).json(result.rows[0]);
 }));
 
 // ✅ 修復密碼更新
 router.put('/:id', authenticate, authorize('admin'), asyncHandler(async (req, res) => {
-  const { name, phone, role, specialties, is_active, password } = req.body;
+  let { name, phone, role, specialties, is_active, password } = req.body;
   if (password && password.trim().length > 0) {
     if (password.trim().length < 8) return res.status(400).json({ error: '密碼至少 8 碼' });
     const hashed = await bcrypt.hash(password.trim(), 12);
     await query(`UPDATE users SET password=$1 WHERE id=$2`, [hashed, req.params.id]);
   }
+  // ── 長度保護 ──────────────────────────────────────────────────
+  name  = name  ? String(name).trim().slice(0, 100) : name;
+  phone = phone ? String(phone).trim().slice(0, 20)  : null;
   const result = await query(
     `UPDATE users SET name=$1, phone=$2, role=$3, specialties=$4, is_active=$5 WHERE id=$6 RETURNING id, name, email, phone, role, specialties, is_active`,
-    [name, phone || null, role, specialties || null, is_active !== false, req.params.id]
+    [name, phone, role, specialties || null, is_active !== false, req.params.id]
   );
   if (!result.rows.length) return res.status(404).json({ error: '用戶不存在' });
   res.json(result.rows[0]);

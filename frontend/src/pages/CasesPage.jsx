@@ -129,16 +129,22 @@ export default function CasesPage() {
               <tbody>
                 {data?.cases?.map(c => (
                   <tr key={c.id} className="group">
-                    <td className="font-medium text-primary text-xs cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>{c.case_number}</td>
-                    <td className="max-w-[180px] cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>
-                      <div className="truncate text-sm font-medium text-gray-800">{c.title}</div>
+                    <td className="font-medium text-primary text-xs cursor-pointer whitespace-nowrap" onClick={() => window.location.href = `/cases/${c.id}`}>{c.case_number}</td>
+                    <td className="max-w-[160px] cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>
+                      <div className="truncate text-sm font-medium text-gray-800" title={c.title}>{c.title}</div>
                     </td>
-                    <td className="text-xs text-gray-500 cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>{c.case_type}</td>
-                    <td className="text-xs cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>{c.owner_company || c.owner_name}</td>
+                    <td className="text-xs text-gray-500 max-w-[80px] cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>
+                      <div className="truncate" title={c.case_type}>{c.case_type}</div>
+                    </td>
+                    <td className="text-xs max-w-[120px] cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>
+                      <div className="truncate" title={c.owner_company || c.owner_name}>{c.owner_company || c.owner_name}</div>
+                    </td>
                     <td className="text-xs text-gray-500 max-w-[120px] cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>
-                      <div className="truncate">{c.location_address}</div>
+                      <div className="truncate" title={c.location_address}>{c.location_address}</div>
                     </td>
-                    {canManage() && <td className="text-xs text-gray-500 cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>{c.engineer_name || <span className="text-gray-300">未指派</span>}</td>}
+                    {canManage() && <td className="text-xs text-gray-500 max-w-[80px] cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>
+                      <div className="truncate">{c.engineer_name || <span className="text-gray-300">未指派</span>}</div>
+                    </td>}
                     <td className="cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}><span className={`badge ${URGENCY_BADGES[c.urgency]}`}>{URGENCY_LABELS[c.urgency]}</span></td>
                     <td className="cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}><span className={`badge ${STATUS_BADGES[c.status]}`}>{STATUS_LABELS[c.status]}</span></td>
                     <td className="text-xs text-gray-400 whitespace-nowrap cursor-pointer" onClick={() => window.location.href = `/cases/${c.id}`}>{formatDateTime(c.created_at)}</td>
