@@ -1,223 +1,215 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
 import { useQuery } from 'react-query';
-import { CheckCircle, Wrench, MapPin, Phone, User, FileText, AlertTriangle } from 'lucide-react';
+import { CheckCircle, ChevronRight, ChevronLeft, Camera, MapPin, Phone, User, FileText, Wrench } from 'lucide-react';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
-const BACKEND_URL = 'https://repair-system-production-cf5b.up.railway.app';
-
 export default function PublicReportPage() {
-  const [step, setStep] = useState('form'); // form | otp | success
+  const [step, setStep] = useState(1);
   const [submittedCase, setSubmittedCase] = useState(null);
-  const [phone, setPhone] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm({
-    defaultValues: { urgency: 'normal' }
+  const [photos, setPhotos] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    owner_name: '', owner_phone: '', owner_company: '',
+    case_type: '', location_address: '', description: '', urgency: 'normal'
   });
 
   const { data: caseTypes } = useQuery('publicCaseTypes', () =>
     api.get('/case-types').then(r => r.data), { retry: 1 }
   );
 
-  const onSubmit = async (data) => {
+  const update = (key, val) => setForm(f => ({ ...f, [key]: val }));
+
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    if (photos.length + files.length > 3) { toast.error('最多上傳 3 張照片'); return; }
+    setPhotos(p => [...p, ...files.map(f => ({ file: f, preview: URL.createObjectURL(f) }))]);
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
     try {
-      const res = await api.post('/cases/public', data);
+      const res = await api.post('/cases/public', {
+        owner_name: form.owner_name,
+        owner_phone: form.owner_phone,
+        owner_company: form.owner_company,
+        case_type: form.case_type,
+        location_address: form.location_address,
+        description: form.description,
+        urgency: form.urgency,
+      });
       setSubmittedCase(res.data);
-      setStep('success');
+      setStep('done');
     } catch (e) {
       toast.error(e.response?.data?.error || '提交失敗，請稍後再試');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  if (step === 'success') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] to-[#0F3460] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl w-full max-w-md p-8 text-center shadow-2xl">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle size={40} className="text-green-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">報修申請已送出！</h2>
-          <p className="text-gray-500 mb-6">我們已收到您的報修申請，客服人員將盡快與您聯繫。</p>
+  const StepIndicator = () => (
+    <div className="flex items-center justify-center gap-2 mb-6">
+      {[1,2,3].map(s => (
+        <React.Fragment key={s}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+            step === s ? 'bg-[#FF6B00] text-white shadow-lg scale-110' :
+            step > s ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-400'
+          }`}>{step > s ? '✓' : s}</div>
+          {s < 3 && <div className={`h-0.5 w-8 ${step > s ? 'bg-green-500' : 'bg-gray-200'}`} />}
+        </React.Fragment>
+      ))}
+    </div>
+  );
 
-          <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
-            <div className="text-xs text-gray-400 mb-1">您的案件編號</div>
-            <div className="text-2xl font-mono font-bold text-[#FF6B00]">{submittedCase?.case_number}</div>
-            <div className="text-xs text-gray-400 mt-2">請保存此編號以便後續查詢進度</div>
-          </div>
-
-          <div className="space-y-3">
-            <a
-              href={`/track/${submittedCase?.case_number}`}
-              className="block w-full bg-[#FF6B00] text-white py-3 rounded-xl font-medium hover:bg-orange-600 transition-colors"
-            >
-              查詢案件進度
-            </a>
-            <button
-              onClick={() => { setStep('form'); setSubmittedCase(null); }}
-              className="block w-full border border-gray-200 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-50 transition-colors"
-            >
-              再次申請報修
-            </button>
-          </div>
+  if (step === 'done') return (
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] to-[#0F3460] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl w-full max-w-sm p-8 text-center shadow-2xl">
+        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle size={40} className="text-green-500" />
         </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">報修申請已送出！</h2>
+        <p className="text-gray-500 text-sm mb-6">我們已收到您的報修申請，客服人員將盡快與您聯繫。</p>
+        <div className="bg-orange-50 rounded-xl p-4 mb-6">
+          <div className="text-xs text-gray-400 mb-1">您的案件編號</div>
+          <div className="text-2xl font-mono font-bold text-[#FF6B00]">{submittedCase?.case_number}</div>
+          <div className="text-xs text-gray-400 mt-1">請保存此編號以便後續查詢進度</div>
+        </div>
+        <a href={`/track/${submittedCase?.case_number}`}
+          className="block w-full bg-[#FF6B00] text-white py-3 rounded-xl font-medium mb-3">
+          查詢案件進度
+        </a>
+        <button onClick={() => { setStep(1); setSubmittedCase(null); setPhotos([]); }}
+          className="block w-full border border-gray-200 text-gray-700 py-3 rounded-xl font-medium">
+          再次申請報修
+        </button>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A2E] to-[#0F3460]">
-      {/* Header */}
-      <div className="px-4 py-6 text-center">
-        <div className="text-[#FF6B00] text-sm font-bold tracking-widest mb-2">皇祥工程設計</div>
-        <h1 className="text-white text-2xl font-bold">線上報修申請</h1>
+      <div className="px-4 pt-6 pb-4 text-center">
+        <div className="text-[#FF6B00] text-xs font-bold tracking-widest mb-1">皇祥工程設計</div>
+        <h1 className="text-white text-xl font-bold">線上報修申請</h1>
         <p className="text-gray-400 text-sm mt-1">填寫以下資料，我們將盡快安排服務</p>
       </div>
 
       <div className="px-4 pb-8">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-lg mx-auto">
-          <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg mx-auto p-6">
+          <StepIndicator />
 
-            {/* 聯絡資訊 */}
-            <div className="p-6 border-b border-gray-50">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                  <User size={16} className="text-[#FF6B00]" />
-                </div>
-                <h3 className="font-semibold text-gray-900">聯絡資訊</h3>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">姓名 *</label>
-                  <input
-                    {...register('owner_name', { required: '請填寫姓名' })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition-colors"
-                    placeholder="您的姓名"
-                  />
-                  {errors.owner_name && <p className="text-xs text-red-500 mt-1">{errors.owner_name.message}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">聯絡電話 *</label>
-                  <input
-                    {...register('owner_phone', { required: '請填寫電話', pattern: { value: /^[0-9]{8,10}$/, message: '請填寫正確電話號碼' } })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition-colors"
-                    placeholder="0912345678"
-                    type="tel"
-                  />
-                  {errors.owner_phone && <p className="text-xs text-red-500 mt-1">{errors.owner_phone.message}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">公司/單位名稱</label>
-                  <input
-                    {...register('owner_company')}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition-colors"
-                    placeholder="選填"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 報修資訊 */}
-            <div className="p-6 border-b border-gray-50">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Wrench size={16} className="text-[#FF6B00]" />
-                </div>
-                <h3 className="font-semibold text-gray-900">報修資訊</h3>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">報修標題 *</label>
-                  <input
-                    {...register('title', { required: '請填寫報修標題' })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition-colors"
-                    placeholder="簡短描述故障狀況"
-                  />
-                  {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title.message}</p>}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">報修類型 *</label>
-                    <select
-                      {...register('case_type', { required: '請選擇類型' })}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition-colors bg-white"
-                    >
-                      <option value="">選擇類型</option>
-                      {caseTypes?.map(t => (
-                        <option key={t.id} value={t.name}>{t.name}</option>
-                      ))}
-                    </select>
-                    {errors.case_type && <p className="text-xs text-red-500 mt-1">{errors.case_type.message}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">緊急程度</label>
-                    <select
-                      {...register('urgency')}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition-colors bg-white"
-                    >
-                      <option value="low">低</option>
-                      <option value="normal">一般</option>
-                      <option value="emergency">🔴 緊急</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">詳細說明 *</label>
-                  <textarea
-                    {...register('description', { required: '請填寫故障說明' })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition-colors resize-none"
-                    rows={4}
-                    placeholder="請詳細描述故障情況、影響範圍、何時開始發生..."
-                  />
-                  {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description.message}</p>}
-                </div>
-              </div>
-            </div>
-
-            {/* 地點資訊 */}
-            <div className="p-6 border-b border-gray-50">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                  <MapPin size={16} className="text-[#FF6B00]" />
-                </div>
-                <h3 className="font-semibold text-gray-900">施工地點</h3>
+          {step === 1 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">基本資料</h2>
+              <div>
+                <label className="form-label flex items-center gap-1"><User size={14}/>姓名 <span className="text-red-500">*</span></label>
+                <input className="form-control" value={form.owner_name} onChange={e=>update('owner_name',e.target.value)} placeholder="請輸入姓名"/>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">完整地址 *</label>
-                <input
-                  {...register('location_address', { required: '請填寫施工地址' })}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-[#FF6B00] transition-colors"
-                  placeholder="完整地址（含樓層/區域）"
-                />
-                {errors.location_address && <p className="text-xs text-red-500 mt-1">{errors.location_address.message}</p>}
+                <label className="form-label flex items-center gap-1"><Phone size={14}/>電話 <span className="text-red-500">*</span></label>
+                <input className="form-control" value={form.owner_phone} onChange={e=>update('owner_phone',e.target.value)} placeholder="0912-345-678" type="tel"/>
               </div>
-            </div>
-
-            {/* 提交 */}
-            <div className="p-6">
-              <div className="bg-orange-50 rounded-xl p-3 mb-4 flex gap-2">
-                <AlertTriangle size={16} className="text-orange-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-orange-700">
-                  提交後系統將產生案件編號，請保存以便後續查詢進度。我們將於工作時間內盡快與您聯繫。
-                </p>
+              <div>
+                <label className="form-label">公司/單位（選填）</label>
+                <input className="form-control" value={form.owner_company} onChange={e=>update('owner_company',e.target.value)} placeholder="公司或大樓名稱"/>
               </div>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-[#FF6B00] text-white py-3.5 rounded-xl font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? '提交中...' : '📤 送出報修申請'}
+              <button onClick={()=>{
+                if(!form.owner_name.trim()||!form.owner_phone.trim()){toast.error('請填寫姓名和電話');return;}
+                setStep(2);
+              }} className="w-full flex items-center justify-center gap-2 bg-[#FF6B00] text-white py-3 rounded-xl font-medium mt-4">
+                下一步 <ChevronRight size={18}/>
               </button>
             </div>
-          </form>
-        </div>
+          )}
 
-        {/* Query link */}
-        <div className="text-center mt-6">
-          <a href="/track" className="text-gray-400 text-sm hover:text-white transition-colors">
-            已有案件編號？查詢進度 →
-          </a>
+          {step === 2 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-gray-900 mb-4">問題描述</h2>
+              <div>
+                <label className="form-label flex items-center gap-1"><Wrench size={14}/>報修類型 <span className="text-red-500">*</span></label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {(caseTypes||[]).map(t=>(
+                    <button key={t.id} onClick={()=>update('case_type',t.name)}
+                      className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                        form.case_type===t.name?'border-[#FF6B00] bg-orange-50 text-[#FF6B00]':'border-gray-200 text-gray-600 hover:border-gray-300'
+                      }`}>{t.name}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="form-label flex items-center gap-1"><MapPin size={14}/>施工地點 <span className="text-red-500">*</span></label>
+                <input className="form-control" value={form.location_address} onChange={e=>update('location_address',e.target.value)} placeholder="請輸入詳細地址"/>
+              </div>
+              <div>
+                <label className="form-label flex items-center gap-1"><FileText size={14}/>問題說明 <span className="text-red-500">*</span></label>
+                <textarea className="form-control" rows={3} value={form.description} onChange={e=>update('description',e.target.value)} placeholder="請描述發生的問題..."/>
+              </div>
+              <div>
+                <label className="form-label">緊急程度</label>
+                <div className="flex gap-2 mt-1">
+                  {[['low','低'],['normal','一般'],['emergency','緊急']].map(([val,label])=>(
+                    <button key={val} onClick={()=>update('urgency',val)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                        form.urgency===val
+                          ? val==='emergency'?'bg-red-500 border-red-500 text-white'
+                          : val==='normal'?'bg-blue-500 border-blue-500 text-white'
+                          : 'bg-gray-400 border-gray-400 text-white'
+                          : 'border-gray-200 text-gray-500'
+                      }`}>{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button onClick={()=>setStep(1)} className="flex-1 flex items-center justify-center gap-2 border border-gray-200 text-gray-600 py-3 rounded-xl font-medium">
+                  <ChevronLeft size={18}/>上一步
+                </button>
+                <button onClick={()=>{
+                  if(!form.case_type||!form.location_address.trim()||!form.description.trim()){toast.error('請填寫所有必填欄位');return;}
+                  setStep(3);
+                }} className="flex-1 flex items-center justify-center gap-2 bg-[#FF6B00] text-white py-3 rounded-xl font-medium">
+                  下一步 <ChevronRight size={18}/>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-gray-900 mb-2">照片上傳 <span className="text-sm font-normal text-gray-400">（選填，最多 3 張）</span></h2>
+              <div className="grid grid-cols-3 gap-2">
+                {photos.map((p,i)=>(
+                  <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-gray-200">
+                    <img src={p.preview} alt="" className="w-full h-full object-cover"/>
+                    <button onClick={()=>setPhotos(p=>p.filter((_,idx)=>idx!==i))}
+                      className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">×</button>
+                  </div>
+                ))}
+                {photos.length<3&&(
+                  <label className="aspect-square rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-[#FF6B00] transition-colors">
+                    <Camera size={24} className="text-gray-400 mb-1"/>
+                    <span className="text-xs text-gray-400">新增照片</span>
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload}/>
+                  </label>
+                )}
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
+                <div className="font-medium text-gray-700 mb-2">確認資料</div>
+                <div className="flex justify-between"><span className="text-gray-400">姓名</span><span>{form.owner_name}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">電話</span><span>{form.owner_phone}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">類型</span><span>{form.case_type}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">地點</span><span className="text-right max-w-[180px] truncate">{form.location_address}</span></div>
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button onClick={()=>setStep(2)} className="flex-1 flex items-center justify-center gap-2 border border-gray-200 text-gray-600 py-3 rounded-xl font-medium">
+                  <ChevronLeft size={18}/>上一步
+                </button>
+                <button onClick={handleSubmit} disabled={submitting}
+                  className="flex-1 flex items-center justify-center gap-2 bg-[#FF6B00] text-white py-3 rounded-xl font-medium disabled:opacity-60">
+                  {submitting?'送出中...':'確認送出'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
