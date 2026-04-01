@@ -248,42 +248,68 @@ function notesBlock(doc, text) {
 
 // ── Sign-off ─────────────────────────────────────────────────
 function signoff(doc, data) {
-  const c1=62,c2=187,c3=62,c4=190;
+  const c1=62, c2=187, c3=62, c4=190;
+  const PAD = 7; // 內距
+  const FONT_LBL = 8; const FONT_VAL = 9.5; const FONT_BIG = 11;
+
+  // ── 計算各列高度（動態）────────────────────────────────────────
+  setFont(doc, true, FONT_BIG, C.dark);
+  const h_signed = Math.max(28, doc.heightOfString(data.signed_by||'—', {width:c2-PAD*2}) + PAD*2);
+
+  // 確認事項：固定三行
+  const confirmItems = ['✓ 工程完工確認', '✓ 品質驗收合格', '✓ 現場清潔完成'];
+  setFont(doc, false, FONT_VAL, C.green);
+  const h_confirm = Math.max(h_signed, confirmItems.length * 14 + PAD*2);
+
+  const rh1 = Math.max(h_signed, h_confirm);
+
+  setFont(doc, false, FONT_VAL, C.dark);
+  const noteText = data.completion_notes||'—';
+  const h_note = Math.max(24, doc.heightOfString(noteText, {width:c2+c3+c4-PAD*2}) + PAD*2);
+  const rh2 = h_note;
+
   let y = doc.y;
 
-  // 第一列：簽收人 + 確認事項（高度加大以容納多行）
-  const rh1 = 36;
-  doc.rect(LM,y,c1,rh1).fill(C.conf2);
-  setFont(doc,false,8.5,C.sub);
-  doc.text('簽  收  人',LM+6,y+13,{width:c1-8,lineBreak:false});
-  doc.rect(LM+c1,y,c2,rh1).fill(C.conf);
-  setFont(doc,true,11,C.dark);
-  doc.text(data.signed_by||'—',LM+c1+8,y+11,{width:c2-12,lineBreak:false});
-  // 確認事項欄位標題
-  doc.rect(LM+c1+c2,y,c3,rh1).fill(C.conf2);
-  setFont(doc,false,8.5,C.sub);
-  doc.text('確 認 事 項',LM+c1+c2+6,y+7,{width:c3-8,lineBreak:false});
-  // 確認事項內容（三行分開顯示，不換行溢位）
-  doc.rect(LM+c1+c2+c3,y,c4,rh1).fill(C.conf);
-  setFont(doc,false,8.5,C.green);
-  doc.text('✓ 工程完工確認',LM+c1+c2+c3+8,y+6,{width:c4-12,lineBreak:false});
-  doc.text('✓ 品質驗收合格',LM+c1+c2+c3+8,y+18,{width:c4-12,lineBreak:false});
-  doc.text('✓ 現場清潔完成',LM+c1+c2+c3+8,y+30,{width:c4-12,lineBreak:false});
-  doc.rect(LM,y+rh1-0.4,CW,0.4).fill(C.border);
+  // ── 第一列：簽收人 + 確認事項 ──────────────────────────────────
+  // 簽收人 label
+  doc.rect(LM, y, c1, rh1).fill(C.conf2);
+  setFont(doc, false, FONT_LBL, C.sub);
+  doc.text('簽  收  人', LM+PAD, y+PAD, {width:c1-PAD*2, lineBreak:false});
+
+  // 簽收人 value
+  doc.rect(LM+c1, y, c2, rh1).fill(C.conf);
+  setFont(doc, true, FONT_BIG, C.dark);
+  doc.text(data.signed_by||'—', LM+c1+PAD, y+PAD, {width:c2-PAD*2, lineBreak:true});
+
+  // 確認事項 label
+  doc.rect(LM+c1+c2, y, c3, rh1).fill(C.conf2);
+  setFont(doc, false, FONT_LBL, C.sub);
+  doc.text('確 認 事 項', LM+c1+c2+PAD, y+PAD, {width:c3-PAD*2, lineBreak:false});
+
+  // 確認事項 value（每項一行）
+  doc.rect(LM+c1+c2+c3, y, c4, rh1).fill(C.conf);
+  setFont(doc, false, FONT_VAL, C.green);
+  confirmItems.forEach((item, i) => {
+    doc.text(item, LM+c1+c2+c3+PAD, y+PAD+i*14, {width:c4-PAD*2, lineBreak:false});
+  });
+
+  doc.rect(LM, y+rh1-0.4, CW, 0.4).fill(C.border);
   y += rh1;
 
-  // 第二列：完工備注
-  const rh2 = 22;
-  doc.rect(LM,y,c1,rh2).fill(C.conf2);
-  setFont(doc,false,8.5,C.sub);
-  doc.text('完 工 備 注',LM+6,y+7,{width:c1-8,lineBreak:false});
-  doc.rect(LM+c1,y,c2+c3+c4,rh2).fill(C.conf);
-  setFont(doc,false,9.5,C.dark);
-  doc.text(data.completion_notes||'—',LM+c1+8,y+6,{width:c2+c3+c4-12,lineBreak:false});
-  doc.rect(LM,y+rh2-0.4,CW,0.4).fill(C.border);
+  // ── 第二列：完工備注（橫跨右三欄）───────────────────────────────
+  doc.rect(LM, y, c1, rh2).fill(C.conf2);
+  setFont(doc, false, FONT_LBL, C.sub);
+  doc.text('完 工 備 注', LM+PAD, y+PAD, {width:c1-PAD*2, lineBreak:false});
+
+  doc.rect(LM+c1, y, c2+c3+c4, rh2).fill(C.conf);
+  setFont(doc, false, FONT_VAL, C.dark);
+  doc.text(noteText, LM+c1+PAD, y+PAD, {width:c2+c3+c4-PAD*2, lineBreak:true});
+
+  doc.rect(LM, y+rh2-0.4, CW, 0.4).fill(C.border);
   y += rh2;
 
-  doc.rect(LM,doc.y,CW,y-doc.y).stroke(C.border);
+  // 外框
+  doc.rect(LM, doc.y, CW, y-doc.y).stroke(C.border);
   doc.y = y + 4;
 }
 
