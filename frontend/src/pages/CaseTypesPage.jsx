@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm } from 'react-hook-form';
 import { Plus, Edit2, Trash2, GripVertical, Check, X } from 'lucide-react';
@@ -13,9 +13,10 @@ const caseTypesAPI = {
   reorder:      (orderedIds) => api.put('/case-types/reorder', { orderedIds }),
 };
 
-// ── 新增/編輯表單（修正空白欄位問題：統一用 modal 表單）────────────
-function TypeForm({ type, onSave, onCancel }) {
-  const { register, handleSubmit, formState: { isSubmitting, errors } } = useForm({
+// ── 新增/編輯表單 ────────────────────────────────────────────────
+// nameWidth: 類型名稱欄的 td offsetWidth，讓說明 input 左側精準對齊說明欄
+function TypeForm({ type, onSave, onCancel, nameWidth }) {
+  const { register, handleSubmit, formState: { isSubmitting } } = useForm({
     defaultValues: {
       name: type?.name || '',
       description: type?.description || '',
@@ -23,25 +24,34 @@ function TypeForm({ type, onSave, onCancel }) {
   });
 
   return (
-    <form onSubmit={handleSubmit(onSave)} className="flex items-center gap-2 py-1 w-full">
-      <input
-        {...register('name', { required: true })}
-        className="form-control text-sm py-1.5"
-        style={{ width: 140 }}
-        placeholder="類型名稱"
-        autoFocus
-      />
-      <input
-        {...register('description')}
-        className="form-control text-sm py-1.5 flex-1"
-        placeholder="說明（選填）"
-      />
-      <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-sm px-2 flex-shrink-0">
-        <Check size={13} />
-      </button>
-      <button type="button" className="btn btn-sm px-2 flex-shrink-0" onClick={onCancel}>
-        <X size={13} />
-      </button>
+    <form
+      onSubmit={handleSubmit(onSave)}
+      className="flex items-center w-full"
+      style={{ gap: 0 }}
+    >
+      {/* 名稱 input：寬度 = 類型名稱欄 td 寬度，說明 input 左側自然對齊說明欄左側 */}
+      <div style={{ width: nameWidth || 160, flexShrink: 0, paddingRight: 8 }}>
+        <input
+          {...register('name', { required: true })}
+          className="form-control text-sm py-1.5 w-full"
+          placeholder="類型名稱"
+          autoFocus
+        />
+      </div>
+      {/* 說明 input：flex-1，左側自然對齊說明欄左側 */}
+      <div className="flex flex-1 items-center gap-2">
+        <input
+          {...register('description')}
+          className="form-control text-sm py-1.5 flex-1"
+          placeholder="說明（選填）"
+        />
+        <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-sm px-2 flex-shrink-0">
+          <Check size={13} />
+        </button>
+        <button type="button" className="btn btn-sm px-2 flex-shrink-0" onClick={onCancel}>
+          <X size={13} />
+        </button>
+      </div>
     </form>
   );
 }
@@ -50,10 +60,11 @@ export default function CaseTypesPage() {
   const qc = useQueryClient();
   const [editingId, setEditingId] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
-  // 拖曳狀態
-  const dragItem   = useRef(null);
+  const dragItem     = useRef(null);
   const dragOverItem = useRef(null);
-  const [localTypes, setLocalTypes] = useState(null); // 拖曳中的本地順序
+  const [localTypes, setLocalTypes] = useState(null);
+  const nameColRef   = useRef(null); // 量測名稱欄寬度用
+  const [nameColWidth, setNameColWidth] = useState(140);
 
   const { data: types, isLoading } = useQuery('caseTypes', () =>
     caseTypesAPI.list().then(r => r.data),
@@ -86,7 +97,14 @@ export default function CaseTypesPage() {
     updateMutation.mutate({ id: type.id, data: { ...type, is_active: !type.is_active } });
   };
 
-  // ── 拖曳排序處理 ─────────────────────────────────────────────────
+  // ── 量測名稱欄寬度（用於對齊表單欄位）─────────────────────────
+  useEffect(() => {
+    if (nameColRef.current) {
+      setNameColWidth(nameColRef.current.offsetWidth);
+    }
+  }, [localTypes]);
+
+  // ── 拖曳排序處理（限縮把手區域觸發）────────────────────────────
   const handleDragStart = (e, index) => {
     dragItem.current = index;
     e.dataTransfer.effectAllowed = 'move';
@@ -105,7 +123,7 @@ export default function CaseTypesPage() {
   const handleDragEnd = () => {
     const orderedIds = displayTypes.map(t => t.id);
     reorderMutation.mutate(orderedIds);
-    dragItem.current = null;
+    dragItem.current   = null;
     dragOverItem.current = null;
   };
 
@@ -146,9 +164,8 @@ export default function CaseTypesPage() {
               <thead>
                 <tr>
                   <th style={{ width: 32 }}></th>
-                  {/* 項目9：欄位順序 狀態/類型名稱/說明/操作 */}
                   <th style={{ width: 80 }}>狀態</th>
-                  <th>類型名稱</th>
+                  <th ref={nameColRef}>類型名稱</th>
                   <th>說明</th>
                   <th style={{ width: 80 }}>操作</th>
                 </tr>
@@ -158,16 +175,17 @@ export default function CaseTypesPage() {
                   <tr
                     key={type.id}
                     className={`${!type.is_active ? 'opacity-40' : ''} ${dragItem.current === index ? 'bg-primary-light' : ''}`}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, index)}
                     onDragEnter={(e) => handleDragEnter(e, index)}
-                    onDragEnd={handleDragEnd}
                     onDragOver={(e) => e.preventDefault()}
-                    style={{ cursor: 'grab' }}
                   >
-                    {/* 拖曳把手 */}
-                    <td>
-                      <GripVertical size={14} className="text-gray-300 cursor-grab active:cursor-grabbing" />
+                    {/* #13 拖曳把手 - 限縮在說明欄位左側的把手圖示範圍內 */}
+                    <td
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, index)}
+                      onDragEnd={handleDragEnd}
+                      style={{ cursor: 'grab', width: 32, userSelect: 'none' }}
+                    >
+                      <GripVertical size={14} className="text-gray-300" />
                     </td>
 
                     {/* 狀態 */}
@@ -180,11 +198,12 @@ export default function CaseTypesPage() {
                       </button>
                     </td>
 
-                    {/* 類型名稱 - 修正項目11：編輯時不再出現多餘空白欄位 */}
+                    {/* #11 類型名稱欄：colSpan 編輯時跨說明欄，TypeForm 名稱欄寬與此欄同寬對齊 */}
                     <td colSpan={editingId === type.id ? 2 : 1}>
                       {editingId === type.id ? (
                         <TypeForm
                           type={type}
+                          nameWidth={nameColWidth}
                           onSave={(data) => updateMutation.mutate({
                             id: type.id,
                             data: { ...data, is_active: type.is_active, sort_order: type.sort_order }
