@@ -41,11 +41,14 @@ export default function LiffReportPage() {
           setLineUser(profile);
           setForm(f => ({ ...f, owner_name: profile.displayName }));
         } else {
-          // 在 LINE 內建瀏覽器中自動登入
+          // 在 LINE 內建瀏覽器中自動登入，指定 redirectUri 避免 404
           if (window.liff.isInClient()) {
-            window.liff.login();
+            window.liff.login({
+              redirectUri: window.location.href
+            });
+            return; // 等待 redirect 完成，不執行後續
           }
-          // 一般瀏覽器中不強制登入，讓用戶手動填寫
+          // 一般瀏覽器不強制登入
         }
       } catch (e) {
         console.error('LIFF init error:', e);
@@ -143,10 +146,10 @@ export default function LiffReportPage() {
 
   if (!liffReady) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F5F0EA] to-[#EDE8E0] flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm opacity-70">載入中...</p>
+      <div className="min-h-screen bg-[#F5F0EA] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#E8614A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm text-gray-500">載入中...</p>
         </div>
       </div>
     );
