@@ -17,7 +17,7 @@ const fullUrl = (url) => {
   return `${BACKEND_URL}${url}`;
 };
 
-// ── 橫式進度條時間軸 ─────────────────────────────────────────
+// ── 橫式進度條時間軸（P1-4：移除百分比）───────────────────────
 const HorizontalTimeline = ({ steps, currentStatus, caseData }) => {
   const statusOrder = ['pending','accepted','dispatched','in_progress','signing','completed','closed'];
   const currentIdx = statusOrder.indexOf(currentStatus);
@@ -29,7 +29,6 @@ const HorizontalTimeline = ({ steps, currentStatus, caseData }) => {
     if (step.key === 'dispatched' && currentIdx > statusOrder.indexOf('dispatched')) return 'done';
     if (step.key === 'signing' && (currentIdx >= statusOrder.indexOf('signing') || caseData.checkout_time)) return 'done';
     if (step.key === 'pending' && currentIdx > 0) return 'done';
-    // active
     if (step.key === 'in_progress' && currentStatus === 'in_progress' && !caseData.checkout_time) return 'active';
     if (step.key === 'signing' && currentStatus === 'signing') return 'active';
     if (step.key === currentStatus) return 'active';
@@ -41,11 +40,10 @@ const HorizontalTimeline = ({ steps, currentStatus, caseData }) => {
 
   return (
     <div className="w-full">
-      {/* 進度條 */}
+      {/* P1-4：僅保留進度條視覺，移除百分比數字 */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs text-gray-500">施工進度</span>
-          <span className="text-xs font-semibold text-primary">{progressPct}%</span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-2">
           <div
@@ -57,41 +55,31 @@ const HorizontalTimeline = ({ steps, currentStatus, caseData }) => {
 
       {/* 橫式步驟 */}
       <div className="relative">
-        {/* 連接線 */}
         <div className="absolute top-5 left-0 right-0 h-0.5 bg-gray-100 mx-6" />
         <div
           className="absolute top-5 left-0 h-0.5 bg-primary transition-all duration-500 mx-6"
           style={{ width: `calc(${progressPct}% - 48px * ${progressPct / 100})` }}
         />
-
         <div className="grid gap-2 relative z-10" style={{ gridTemplateColumns: `repeat(${steps.length}, 1fr)` }}>
           {steps.map((step) => {
             const state = getStepState(step);
             return (
               <div key={step.key} className="flex flex-col items-center gap-1.5 px-1">
-                {/* 圖示 */}
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all
                   ${state === 'done' ? 'bg-primary border-primary text-white' :
                     state === 'active' ? 'bg-white border-primary text-primary shadow-md shadow-primary/20' :
                     'bg-white border-gray-200 text-gray-300'}`}>
-                  {state === 'done'
-                    ? <CheckCircle size={18} />
-                    : state === 'active'
-                    ? <AlertCircle size={18} className="animate-pulse" />
-                    : <Circle size={18} />}
+                  {state === 'done' ? <CheckCircle size={18} /> :
+                   state === 'active' ? <AlertCircle size={18} className="animate-pulse" /> :
+                   <Circle size={18} />}
                 </div>
-                {/* 標籤 */}
                 <div className={`text-center text-xs leading-tight font-medium
                   ${state === 'done' ? 'text-primary' :
-                    state === 'active' ? 'text-primary font-semibold' :
-                    'text-gray-300'}`}>
+                    state === 'active' ? 'text-primary font-semibold' : 'text-gray-300'}`}>
                   {step.label}
                 </div>
-                {/* 時間 */}
                 {step.time && (
-                  <div className="text-xs text-success text-center leading-tight">
-                    {formatDateTime(step.time)}
-                  </div>
+                  <div className="text-xs text-success text-center leading-tight">{formatDateTime(step.time)}</div>
                 )}
                 {!step.time && state === 'active' && (
                   <div className="text-xs text-primary text-center bg-primary/10 rounded px-1 py-0.5">進行中</div>
@@ -183,7 +171,7 @@ export default function CaseDetailPage() {
         </div>
         <div className="flex gap-2 flex-wrap flex-shrink-0">
           <Link to={`/chat/${id}`} className="btn btn-sm"><MessageSquare size={13} /> 客服對話</Link>
-          <Link to={`/chat/${id}?internal=1`} className="btn btn-sm btn-outline"><MessageSquare size={13} /> 內部對話</Link>
+          <Link to={`/case-chat/${id}`} className="btn btn-sm"><MessageSquare size={13} /> 內部對話</Link>
           {(s === 'in_progress' || s === 'signing') && (canManage() || isEngineer()) && (
             <Link to={`/cases/${id}/sign`} className="btn btn-primary btn-sm">業主簽收</Link>
           )}
@@ -211,7 +199,8 @@ export default function CaseDetailPage() {
 
       {/* ── 案件資訊 ── */}
       {activeTab === 'info' && (
-        <div className="grid md:grid-cols-2 gap-5">
+        <div className="space-y-4">
+          {/* 案件資訊 */}
           <div className="card card-body space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-medium text-sm text-gray-900">案件資訊</h3>
@@ -229,49 +218,63 @@ export default function CaseDetailPage() {
               <div className="flex gap-2"><FileText size={14} className="text-gray-400 mt-0.5 flex-shrink-0" /><div className="min-w-0"><div className="text-xs text-gray-400">報修說明</div><div className="text-gray-700 break-words">{c.description}</div></div></div>
             </div>
           </div>
-          <div className="space-y-4">
-            <div className="card card-body space-y-3">
-              <h3 className="font-medium text-sm text-gray-900">派工資訊</h3>
-              {c.engineer_name ? (
-                <div className="text-sm space-y-2">
-                  <div className="flex justify-between"><span className="text-gray-400">負責工程師</span><span className="font-medium">{c.engineer_name}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">派工時間</span><span>{formatDateTime(c.assigned_at)}</span></div>
-                  {c.scheduled_start && <div className="flex justify-between"><span className="text-gray-400">預計到場</span><span>{formatDateTime(c.scheduled_start)}</span></div>}
-                  {c.checkin_time && <div className="flex justify-between"><span className="text-gray-400">實際到場</span><span className="text-success">{formatDateTime(c.checkin_time)}</span></div>}
-                  {c.checkout_time && <div className="flex justify-between"><span className="text-gray-400">離場時間</span><span className="text-success">{formatDateTime(c.checkout_time)}</span></div>}
-                  {c.checkin_lat && (
-                    <div className="text-xs text-gray-400 flex items-center gap-1">
-                      <MapPin size={11} /> GPS：{parseFloat(c.checkin_lat).toFixed(6)}, {parseFloat(c.checkin_lng).toFixed(6)}
-                    </div>
-                  )}
-                </div>
-              ) : <div className="text-sm text-gray-400">尚未派工</div>}
-            </div>
 
-            {c.signed_at && (
-              <div className="card card-body bg-success-light border-success/20 space-y-3">
-                <h3 className="font-medium text-sm text-success">業主簽收記錄</h3>
-                <div className="text-sm space-y-1.5">
-                  <div className="flex justify-between"><span className="text-gray-500">簽收人</span><span className="font-medium">{c.signed_by || '--'}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">簽收時間</span><span>{formatDateTime(c.signed_at)}</span></div>
-                </div>
-                {c.owner_signature && (
+          {/* P1-1：派工資訊移至案件資訊下方 */}
+          <div className="card card-body space-y-3">
+            <h3 className="font-medium text-sm text-gray-900">派工資訊</h3>
+            {c.engineer_name ? (
+              <div className="text-sm space-y-2">
+                <div className="flex justify-between"><span className="text-gray-400">負責工程師</span><span className="font-medium">{c.engineer_name}</span></div>
+                <div className="flex justify-between"><span className="text-gray-400">派工時間</span><span>{formatDateTime(c.assigned_at)}</span></div>
+                {c.scheduled_start && <div className="flex justify-between"><span className="text-gray-400">預計到場</span><span>{formatDateTime(c.scheduled_start)}</span></div>}
+              </div>
+            ) : <div className="text-sm text-gray-400">尚未派工</div>}
+          </div>
+
+          {/* P1-2：施工資訊區塊（含 P1-3 移入的到場/離場/GPS）*/}
+          {(c.checkin_time || c.checkout_time || c.signed_at) && (
+            <div className="card card-body space-y-3">
+              <h3 className="font-medium text-sm text-gray-900">施工資訊</h3>
+              <div className="text-sm space-y-2">
+                {/* P1-3：實際到場/離場時間移至此處 */}
+                {c.checkin_time && (
                   <div>
-                    <div className="text-xs text-gray-500 mb-1.5">簽名影像</div>
-                    <div className="border border-success/30 rounded-lg overflow-hidden bg-white p-2">
-                      <img src={c.owner_signature} alt="業主簽名" className="max-w-full h-auto max-h-24 mx-auto block" style={{ mixBlendMode: 'multiply' }} />
-                    </div>
+                    <div className="flex justify-between"><span className="text-gray-400">實際到場</span><span className="text-success">{formatDateTime(c.checkin_time)}</span></div>
+                    {/* P1-3：GPS 顯示在時間下一行 */}
+                    {c.checkin_lat && (
+                      <div className="text-xs text-gray-400 flex items-center gap-1 mt-0.5 ml-0">
+                        <MapPin size={11} /> GPS：{parseFloat(c.checkin_lat).toFixed(6)}, {parseFloat(c.checkin_lng).toFixed(6)}
+                      </div>
+                    )}
                   </div>
                 )}
-                {c.completion_notes && <div className="text-xs text-gray-500">備註：{c.completion_notes}</div>}
-                {c.drive_pdf_link && (
-                  <a href={c.drive_pdf_link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
-                    <FileText size={11} /> 查看結案 PDF
-                  </a>
+                {c.checkout_time && (
+                  <div className="flex justify-between"><span className="text-gray-400">離場時間</span><span className="text-success">{formatDateTime(c.checkout_time)}</span></div>
+                )}
+                {c.signed_at && (
+                  <div className="pt-2 border-t border-gray-50 space-y-1.5">
+                    <div className="text-xs font-medium text-success mb-1">業主簽收記錄</div>
+                    <div className="flex justify-between"><span className="text-gray-500">簽收人</span><span className="font-medium">{c.signed_by || '--'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">簽收時間</span><span>{formatDateTime(c.signed_at)}</span></div>
+                    {c.owner_signature && (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1.5">簽名影像</div>
+                        <div className="border border-success/30 rounded-lg overflow-hidden bg-white p-2">
+                          <img src={c.owner_signature} alt="業主簽名" className="max-w-full h-auto max-h-24 mx-auto block" style={{ mixBlendMode: 'multiply' }} />
+                        </div>
+                      </div>
+                    )}
+                    {c.completion_notes && <div className="text-xs text-gray-500">備註：{c.completion_notes}</div>}
+                    {c.drive_pdf_link && (
+                      <a href={c.drive_pdf_link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
+                        <FileText size={11} /> 查看結案 PDF
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -369,77 +369,80 @@ function RoleSettings() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h3 className="text-base font-semibold text-gray-900">角色管理</h3>
-          <p className="text-sm text-gray-500 mt-0.5">設定各角色可存取的功能模組與操作權限，與「權限設定」頁面同步</p>
+          <p className="text-sm text-gray-500 mt-0.5">設定各角色標籤，權限設定請至「權限設定」頁面進行詳細設定</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowNewRole(true)}>
           <Plus size={14} /> 新增角色
         </button>
       </div>
 
-      {/* 角色卡片列表 */}
-      <div className="space-y-3">
-        {roles.map(role => {
-          const color = getColor(role.color);
-          const isAdmin = role.key === 'admin';
-
-          return (
-            <div key={role.key} className="card p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`${color.bg} ${color.text} px-3 py-1.5 rounded-full text-sm font-semibold`}>
-                    {role.label}
-                  </div>
-                  {isAdmin && (
-                    <span className="text-xs text-purple-500 bg-purple-50 px-2 py-1 rounded-full">系統內建，完整權限</span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    className="btn btn-sm gap-1.5"
-                    onClick={() => setEditingRole(role)}
-                  >
-                    <Edit2 size={13} /> 編輯
-                  </button>
-                  {role.editable && !isAdmin && (
-                    <button
-                      className="btn btn-sm text-danger border-red-200 hover:bg-red-50"
-                      onClick={() => onDeleteRole(role.key)}
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* 模組標籤 */}
-              <div className="flex flex-wrap gap-2 mt-4">
-                {isAdmin ? (
-                  <span className="text-xs text-gray-400">擁有所有功能模組的完整存取權限</span>
-                ) : role.modules?.length > 0 ? (
-                  role.modules.map(modKey => {
-                    const mod = ALL_MODULES.find(m => m.key === modKey);
-                    const perms = storage.getPermissions()[modKey]?.[role.key] || {};
-                    return mod ? (
-                      <div key={modKey} className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
-                        <span className="text-sm text-gray-700">{mod.label}</span>
-                        {perms.edit && <span className="text-xs text-primary bg-primary-light px-1.5 py-0.5 rounded">修改</span>}
-                        {perms.delete && <span className="text-xs text-danger bg-danger-light px-1.5 py-0.5 rounded">刪除</span>}
-                      </div>
-                    ) : null;
-                  })
-                ) : (
-                  <span className="text-sm text-gray-400 italic">尚未設定任何功能模組，請點擊「編輯」進行設定</span>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      {/* P5-3：角色總覽表 + P5-4：色彩重新調和 */}
+      <div className="card overflow-hidden">
+        <table className="table-base">
+          <thead>
+            <tr>
+              <th>角色名稱</th>
+              <th>標籤顏色</th>
+              <th>類型</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {roles.map(role => {
+              const isAdmin = role.key === 'admin';
+              // P5-4：色彩重新調和（基於 #E8614A，排除狀態色）
+              const ROLE_TAG_COLORS = {
+                admin:            { text: 'text-[#7C4DFF]', bg: 'bg-[#EDE7FF]' },
+                customer_service: { text: 'text-[#E8614A]', bg: 'bg-[#FFF0EC]' },
+                engineer:         { text: 'text-[#0F6E56]', bg: 'bg-[#E1F5EE]' },
+                owner:            { text: 'text-[#5B6B8A]', bg: 'bg-[#EEF0F5]' },
+              };
+              const tagColor = ROLE_TAG_COLORS[role.key] || getColor(role.color);
+              return (
+                <tr key={role.key}>
+                  <td>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${tagColor.bg} ${tagColor.text}`}>
+                      {role.label}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {COLOR_OPTIONS.map(c => (
+                        <span key={c.key} className={`w-5 h-5 rounded-full ${c.bg} border-2 ${role.color === c.key ? 'border-primary scale-110' : 'border-transparent'}`} title={c.label} />
+                      ))}
+                    </div>
+                  </td>
+                  <td>
+                    {isAdmin
+                      ? <span className="text-xs text-purple-500 bg-purple-50 px-2 py-1 rounded-full">系統內建</span>
+                      : <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">自訂</span>
+                    }
+                  </td>
+                  <td>
+                    <div className="flex gap-1">
+                      <button className="btn btn-sm gap-1.5" onClick={() => setEditingRole(role)}>
+                        <Edit2 size={13} /> 編輯
+                      </button>
+                      {role.editable && !isAdmin && (
+                        <button
+                          className="btn btn-sm text-danger border-red-200 hover:bg-red-50"
+                          onClick={() => onDeleteRole(role.key)}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
-      <div className="flex items-start gap-2 bg-blue-50 border border-blue-100 rounded-xl p-4 mt-4 text-sm text-blue-700">
+      <div className="flex items-start gap-2 bg-primary-light border border-primary/10 rounded-xl p-4 mt-4 text-sm text-primary-dark">
         <Info size={15} className="flex-shrink-0 mt-0.5" />
-        <span>此處設定的模組權限會與「權限設定」頁面同步。若角色無某功能模組，該角色在「權限設定」中的對應欄位將顯示「無模組權限」。</span>
+        <span>角色標籤顏色可於「編輯」中調整。各功能模組的詳細權限（檢視/新增/修改/刪除）請至「<strong>權限設定</strong>」頁面進行設定。</span>
       </div>
 
       {/* 新增角色 Modal */}
@@ -468,7 +471,7 @@ function RoleSettings() {
                   ))}
                 </div>
               </div>
-              <p className="text-sm text-gray-500">建立後可在角色卡片點擊「編輯」設定功能模組與操作權限。</p>
+              <p className="text-sm text-gray-500">建立後請至「權限設定」頁面設定該角色的功能權限。</p>
               <div className="flex justify-end gap-2">
                 <button type="button" className="btn" onClick={() => { setShowNewRole(false); reset(); }}>取消</button>
                 <button type="submit" className="btn btn-primary">建立角色</button>

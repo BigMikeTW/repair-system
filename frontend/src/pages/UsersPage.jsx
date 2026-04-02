@@ -136,27 +136,23 @@ export default function UsersPage() {
       <div className="card overflow-hidden">
         <table className="table-base">
           <thead>
-            <tr><th>姓名</th><th>角色</th><th>電子郵件</th><th>手機</th><th>專長</th><th>狀態</th><th>最後登入</th><th>操作</th></tr>
+            {/* P2-1：欄位排序：狀態/角色/專長/手機/電子郵件/操作/上線時間 */}
+            <tr><th>姓名</th><th>狀態</th><th>角色</th><th>專長</th><th>手機</th><th>電子郵件</th><th>操作</th><th>最後登入</th></tr>
           </thead>
           <tbody>
             {users?.map(u => (
               <tr key={u.id}>
                 <td>
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-primary-light flex items-center justify-center text-xs font-medium text-primary-dark flex-shrink-0">
-                      {u.name.slice(0, 2)}
-                    </div>
-                    <span className="text-sm font-medium truncate max-w-[100px]">{u.name}</span>
-                  </div>
+                  {/* P2-2：移除縮寫圓圈，只顯示姓名 */}
+                  <span className="text-sm font-medium">{u.name}</span>
                 </td>
+                <td><span className={`badge ${u.is_active ? 'badge-success' : 'badge-gray'}`}>{u.is_active ? '啟用' : '停用'}</span></td>
                 <td><span className={`badge ${ROLE_BADGES[u.role]}`}>{ROLE_LABELS[u.role]}</span></td>
-                <td className="text-xs text-gray-500 max-w-[160px]"><div className="truncate">{u.email}</div></td>
-                <td className="text-xs text-gray-500 max-w-[100px]"><div className="truncate">{u.phone || '--'}</div></td>
                 <td className="text-xs text-gray-400 max-w-[140px]">
                   <div className="truncate">{u.specialties?.join(', ') || '--'}</div>
                 </td>
-                <td><span className={`badge ${u.is_active ? 'badge-success' : 'badge-gray'}`}>{u.is_active ? '啟用' : '停用'}</span></td>
-                <td className="text-xs text-gray-400">{formatDateTime(u.last_login)}</td>
+                <td className="text-xs text-gray-500 max-w-[100px]"><div className="truncate">{u.phone || '--'}</div></td>
+                <td className="text-xs text-gray-500 max-w-[160px]"><div className="truncate">{u.email}</div></td>
                 <td>
                   <div className="flex gap-1">
                     <Link to={`/users/${u.id}`} className="btn btn-sm gap-1 text-xs">
@@ -173,6 +169,7 @@ export default function UsersPage() {
                     )}
                   </div>
                 </td>
+                <td className="text-xs text-gray-400">{formatDateTime(u.last_login)}</td>
               </tr>
             ))}
             {!users?.length && (

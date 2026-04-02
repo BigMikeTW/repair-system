@@ -25,7 +25,8 @@ const navConfig = [
   {
     section: '客服',
     items: [
-      { to: '/chat', icon: MessageSquare, label: '線上客服', roles: ['admin','customer_service','engineer','owner'] },
+      { to: '/chat',      icon: MessageSquare, label: '線上客服', roles: ['admin','customer_service','owner'] },
+      { to: '/case-chat', icon: MessageSquare, label: '案件溝通', roles: ['admin','customer_service','engineer'] },
     ]
   },
   {
@@ -198,8 +199,14 @@ export default function Layout() {
               </button>
             </div>
             <NavLink to="/profile" className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-gray-100 rounded-lg">
-              <div className="w-6 h-6 rounded-full bg-primary-light flex items-center justify-center text-xs font-medium text-primary-dark">
-                {user?.name?.slice(0, 2)}
+              {/* P2-3：只顯示姓名，套用角色標籤顏色 */}
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white flex-shrink-0 ${
+                user?.role === 'admin' ? 'bg-purple-500' :
+                user?.role === 'customer_service' ? 'bg-primary' :
+                user?.role === 'engineer' ? 'bg-teal' :
+                'bg-warning'
+              }`}>
+                {user?.name?.slice(0, 1)}
               </div>
               <span className="text-xs text-gray-700 hidden sm:block">{user?.name}</span>
             </NavLink>

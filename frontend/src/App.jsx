@@ -15,6 +15,7 @@ const DispatchPage      = lazy(() => import('./pages/DispatchPage'));
 const FieldPage         = lazy(() => import('./pages/FieldPage'));
 const FieldQuotePage    = lazy(() => import('./pages/FieldQuotePage'));
 const ChatPage          = lazy(() => import('./pages/ChatPage'));
+const CaseChatPage      = lazy(() => import('./pages/CaseChatPage'));
 const FinancePage       = lazy(() => import('./pages/FinancePage'));
 const PaymentPage       = lazy(() => import('./pages/PaymentPage'));
 const UsersPage         = lazy(() => import('./pages/UsersPage'));
@@ -69,6 +70,8 @@ export default function App() {
           <Route path="field-quote" element={<PrivateRoute roles={['engineer']}><FieldQuotePage /></PrivateRoute>} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="chat/:caseId" element={<ChatPage />} />
+          <Route path="case-chat" element={<CaseChatPage />} />
+          <Route path="case-chat/:caseId" element={<CaseChatPage />} />
           <Route path="finance" element={<PrivateRoute roles={['admin','customer_service']}><FinancePage /></PrivateRoute>} />
           <Route path="payments" element={<PrivateRoute roles={['admin','customer_service']}><PaymentPage /></PrivateRoute>} />
           <Route path="users" element={<PrivateRoute roles={['admin']}><UsersPage /></PrivateRoute>} />
