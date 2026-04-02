@@ -56,13 +56,14 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  // 快速角色切換狀態 — 使用 localStorage 持久化，避免 navigate 後 state 重置
+  // ── 快速角色切換（測試模式）────────────────────────────────
+  // 設計原則：每次切換都做完整的頁面重新載入（window.location.href）
+  // 確保 React app、React Query 快取、Socket 連線全部重新初始化
+  // 所有狀態透過 localStorage 持久化，不依賴 React state
   const [showRoleMenu, setShowRoleMenu] = useState(false);
 
-  // 從 localStorage 讀取測試模式狀態（持久化）
-  const testMode = localStorage.getItem('test_mode') === '1';
-  const testRoleLabel = localStorage.getItem('test_role_label') || '';
-  const [, forceUpdate] = useState(0); // 強制重新渲染
+  const testMode      = localStorage.getItem('tm_active') === '1';
+  const testRoleLabel = localStorage.getItem('tm_role_label') || '';
 
   const TEST_ROLES = [
     { key: 'customer_service', label: '客服人員' },
@@ -72,52 +73,41 @@ export default function Layout() {
 
   const switchToRole = async (roleKey, roleLabel) => {
     try {
-      const curToken = localStorage.getItem('token');
-      const curUser = localStorage.getItem('user');
-      const res = await api.post('/auth/switch-role', { targetRole: roleKey });
-      // 持久化儲存管理員資訊
-      localStorage.setItem('admin_token_backup', curToken);
-      localStorage.setItem('admin_user_backup', curUser);
-      localStorage.setItem('test_mode', '1');
-      localStorage.setItem('test_role_label', roleLabel);
-      // 完整切換至測試帳號
-      useAuthStore.getState().login(res.data.token, res.data.user);
       setShowRoleMenu(false);
-      forceUpdate(n => n + 1);
-      toast.success(`已切換至 ${roleLabel} 測試模式`);
-      navigate('/');
+      const res = await api.post('/auth/switch-role', { targetRole: roleKey });
+      // 1. 備份管理員 token 與 user
+      localStorage.setItem('tm_admin_token', localStorage.getItem('token'));
+      localStorage.setItem('tm_admin_user',  localStorage.getItem('user'));
+      // 2. 寫入測試帳號 token 與 user
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('user',  JSON.stringify(res.data.user));
+      // 3. 標記測試模式
+      localStorage.setItem('tm_active',     '1');
+      localStorage.setItem('tm_role_label', roleLabel);
+      // 4. 完整重新載入 app，確保所有狀態乾淨重置
+      window.location.href = '/';
     } catch (e) {
       toast.error(e.response?.data?.error || '切換失敗，請確認測試帳號已建立');
     }
   };
 
   const restoreAdmin = () => {
-    const adminToken = localStorage.getItem('admin_token_backup');
+    const adminToken = localStorage.getItem('tm_admin_token');
+    const adminUser  = localStorage.getItem('tm_admin_user');
     if (!adminToken) {
       toast.error('找不到管理員備份，請重新登入');
       logout(); navigate('/login'); return;
     }
-    // 先嘗試用 API 取得最新管理員資料
+    // 1. 還原管理員 token 與 user
     localStorage.setItem('token', adminToken);
-    api.get('/auth/me').then(r => {
-      useAuthStore.getState().login(adminToken, r.data);
-    }).catch(() => {
-      // API 失敗時從備份還原
-      try {
-        const backupUser = JSON.parse(localStorage.getItem('admin_user_backup'));
-        if (backupUser) useAuthStore.getState().login(adminToken, backupUser);
-        else { logout(); navigate('/login'); return; }
-      } catch { logout(); navigate('/login'); return; }
-    }).finally(() => {
-      // 清除測試模式標記
-      localStorage.removeItem('test_mode');
-      localStorage.removeItem('test_role_label');
-      localStorage.removeItem('admin_token_backup');
-      localStorage.removeItem('admin_user_backup');
-      forceUpdate(n => n + 1);
-      toast.success('已返回管理員模式');
-      navigate('/');
-    });
+    localStorage.setItem('user',  adminUser || '{}');
+    // 2. 清除所有測試模式標記
+    localStorage.removeItem('tm_active');
+    localStorage.removeItem('tm_role_label');
+    localStorage.removeItem('tm_admin_token');
+    localStorage.removeItem('tm_admin_user');
+    // 3. 完整重新載入 app
+    window.location.href = '/';
   };
 
   const { data: notifications, refetch: refetchNotifs } = useQuery(
@@ -143,11 +133,8 @@ export default function Layout() {
   }, [socket]);
 
   const handleLogout = () => {
-    // 登出時一併清除測試模式狀態
-    localStorage.removeItem('test_mode');
-    localStorage.removeItem('test_role_label');
-    localStorage.removeItem('admin_token_backup');
-    localStorage.removeItem('admin_user_backup');
+    // 清除所有測試模式狀態
+    ['tm_active','tm_role_label','tm_admin_token','tm_admin_user'].forEach(k => localStorage.removeItem(k));
     logout();
     navigate('/login');
   };
