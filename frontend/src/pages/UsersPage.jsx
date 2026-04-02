@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { useForm } from 'react-hook-form';
-import { Link } from 'react-router-dom';
-import { UserPlus, Edit2, UserX, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { UserPlus } from 'lucide-react';
 import { usersAPI } from '../utils/api';
 import { ROLE_LABELS, ROLE_BADGES, formatDateTime } from '../utils/helpers';
 import toast from 'react-hot-toast';
@@ -101,6 +101,7 @@ function UserModal({ user: editUser, onClose, onSuccess }) {
 
 export default function UsersPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [search, setSearch] = useState('');
@@ -136,44 +137,38 @@ export default function UsersPage() {
       <div className="card overflow-hidden">
         <table className="table-base">
           <thead>
-            {/* P2-1：欄位排序：狀態/角色/專長/手機/電子郵件/操作/上線時間 */}
-            <tr><th>姓名</th><th>狀態</th><th>角色</th><th>專長</th><th>手機</th><th>電子郵件</th><th>操作</th><th>最後登入</th></tr>
+            <tr><th>姓名</th><th>狀態</th><th>角色</th><th>專長</th><th>手機</th><th>電子郵件</th><th>最後登入</th></tr>
           </thead>
           <tbody>
             {users?.map(u => (
-              <tr key={u.id}>
-                <td>
-                  {/* P2-2：移除縮寫圓圈，只顯示姓名 */}
-                  <span className="text-sm font-medium">{u.name}</span>
-                </td>
-                <td><span className={`badge ${u.is_active ? 'badge-success' : 'badge-gray'}`}>{u.is_active ? '啟用' : '停用'}</span></td>
-                <td><span className={`badge ${ROLE_BADGES[u.role]}`}>{ROLE_LABELS[u.role]}</span></td>
-                <td className="text-xs text-gray-400 max-w-[140px]">
-                  <div className="truncate">{u.specialties?.join(', ') || '--'}</div>
-                </td>
-                <td className="text-xs text-gray-500 max-w-[100px]"><div className="truncate">{u.phone || '--'}</div></td>
-                <td className="text-xs text-gray-500 max-w-[160px]"><div className="truncate">{u.email}</div></td>
-                <td>
-                  <div className="flex gap-1">
-                    <Link to={`/users/${u.id}`} className="btn btn-sm gap-1 text-xs">
-                      <FileText size={12} /> 詳情
-                    </Link>
-                    <button className="btn btn-sm" onClick={() => { setEditUser(u); setShowModal(true); }}>
-                      <Edit2 size={12} />
-                    </button>
-                    {u.is_active && (
-                      <button className="btn btn-sm text-danger hover:bg-danger-light"
-                        onClick={() => { if (window.confirm(`確定要停用 ${u.name} 的帳號？`)) deactivate.mutate(u.id); }}>
-                        <UserX size={12} />
-                      </button>
-                    )}
+              /* #5：整列可點擊進入詳情，停用時文字灰階 */
+              <tr key={u.id}
+                className={`cursor-pointer hover:bg-gray-50 transition-colors ${!u.is_active ? 'opacity-40' : ''}`}
+                onClick={() => navigate(`/users/${u.id}`)}>
+                <td><span className="text-sm font-medium">{u.name}</span></td>
+                <td onClick={e => e.stopPropagation()}>
+                  {/* #5：狀態改為 Toggle Switch */}
+                  <div
+                    className={`w-10 h-5 rounded-full relative cursor-pointer transition-colors ${u.is_active ? 'bg-success' : 'bg-gray-300'}`}
+                    onClick={() => {
+                      if (u.is_active) {
+                        if (window.confirm(`確定停用 ${u.name} 的帳號？`)) deactivate.mutate(u.id);
+                      } else {
+                        usersAPI.update(u.id, { ...u, is_active: true }).then(() => qc.invalidateQueries('users'));
+                      }
+                    }}>
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${u.is_active ? 'translate-x-5' : 'translate-x-0.5'}`} />
                   </div>
                 </td>
+                <td><span className={`badge ${ROLE_BADGES[u.role]}`}>{ROLE_LABELS[u.role]}</span></td>
+                <td className="text-xs text-gray-400 max-w-[140px]"><div className="truncate">{u.specialties?.join(', ') || '--'}</div></td>
+                <td className="text-xs text-gray-500 max-w-[100px]"><div className="truncate">{u.phone || '--'}</div></td>
+                <td className="text-xs text-gray-500 max-w-[160px]"><div className="truncate">{u.email}</div></td>
                 <td className="text-xs text-gray-400">{formatDateTime(u.last_login)}</td>
               </tr>
             ))}
             {!users?.length && (
-              <tr><td colSpan="8" className="py-12 text-center text-sm text-gray-400">沒有符合的人員</td></tr>
+              <tr><td colSpan="7" className="py-12 text-center text-sm text-gray-400">沒有符合的人員</td></tr>
             )}
           </tbody>
         </table>

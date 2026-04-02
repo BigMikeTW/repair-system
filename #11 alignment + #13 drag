@@ -1,0 +1,75 @@
+[33md79fbba[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: case types #11 input alignment + #13 drag handle only
+[33m987ba42[m fix: case types 5 fixes + LIFF login redirectUri 404 fix
+[33me09a831[m fix: case types - column order, RWD, blank field, sort drag & drop
+[33mdabaf7e[m fix: update primary color to coral #E8614A in tailwind config
+[33m1c767e4[m feat: 10-item system update - Pro080 brand, coral theme, chat split, PDF logo
+[33m2be1d40[m fix: public case-types route + LIFF init error handling
+[33m014ab03[m feat: LINE/Google OAuth login + step-by-step repair form + LIFF support
+[33mb3827ac[m fix: final column widths - quantity supports 100000, all amounts right-aligned
+[33m9a2e31d[m fix: all PDF table column widths fill full width, no gaps
+[33m0b4e536[m fix: PDF table header contrast + amounts right-aligned + quotation form white screen
+[33m95430fd[m fix: quotation form white screen + PDF amount right-align
+[33m49d18ef[m fix: comprehensive text overflow protection + quotation form hooks fix
+[33maaa1920[m fix: input length protection + quotation PDF totals layout
+[33m3818710[m fix: quotation totals section layout, prevent amount overlap
+[33m4432782[m fix: dynamic row height for clientBlock, quotation items, field notes
+[33m1afaab4[m fix: signoff dynamic height, confirm items 3 lines no overflow
+[33m616398f[m fix: signoff layout - split confirm items into 3 lines, fix overflow
+[33m7886777[m fix: timeRecord labels use CJK font
+[33m485b099[m fix: replace all Helvetica with CJK font in finance PDF
+[33m1153eaa[m fix: embed NotoSansTC.ttf directly in repo
+[33m39a65a6[m fix: font download with curl and multiple CDN fallback
+[33m596490e[m fix: switch font CDN to jsDelivr
+[33mfe6c174[m fix: embed font locally v6
+[33m57d1d7b[m fix: 字型改用直接下載TTF/輸出按鈕改印表機圖示
+[33m5064884[m fix: PDF字型改用Noto CJK OTF/新增瀏覽器開啟功能
+[33m2897040[m fix: 中文字型嵌入/台頭預設公司/PDF選單同步
+[33mea38cac[m fix: PDF字型/取消結案/報價修改/備注編輯/初始設定/PDF公司選單
+[33m1c3c76b[m feat: v2完整更新 - 字體/選單/產號/初始設定/備注/台頭/CRUD/結案/案件備注
+[33mc79c75f[m feat: replace PDF engine with EnterpriseOS style, fix Chinese font
+[33m9ac1724[m rebrand: Signify → 皇祥工程設計 全站替換
+[33m32df9ec[m feat: improve font sizes, rewrite role management with full edit
+[33made88dc[m feat: fix PDF auth, WebSocket, receipt PDF, system settings, role management
+[33m6655329[m fix: hrData variable name, remove manifest 403
+[33m32527e0[m feat: add LINE binding UI to ProfilePage and UserDetailPage
+[33mfa3d589[m feat: LINE OA integration, public report page, PWA, GPS geocoding
+[33m486437d[m fix: use UUID types in migration
+[33m4dce948[m trigger redeploy
+[33m524a03f[m fix: correct db path, add closure/receipt routes, fix layout menu
+[33m8cacd0d[m fix: auto-migration on startup, fix closure route ordering
+[33mda5c20b[m fix: rename menu to 帳務處理, fix finance tabs
+[33m92a4c89[m feat: add delete, dispatch cancel/reassign, closure/receipt modules
+[33m00ea899[m fix: 修正四項顯示與功能問題
+[33m8e819c6[m feat: 六項功能新增與修正
+[33m9c4eb8d[m fix: 資料夾名改英文，檔名用UUID，解決header編碼問題
+[33m00cb858[m fix: 修正 Dropbox too_many_write_operations，加入資料夾快取
+[33m1afdd22[m fix: 改用 Dropbox Refresh Token，解決照片上傳問題
+[33mc33af6e[m feat: 從 Google Drive 改為 Dropbox 上傳照片
+[33m077e82c[m fix: 照片上傳改用 memoryStorage，Drive 檔案設為公開可讀
+[33m5f6fc0b[m fix photo upload sync to drive
+[33m69c80e3[m fix photo display and drive sync
+[33m4cf6785[m fix photo upload timeout for mobile
+[33m45eb06d[m fix database connection
+[33mfa116c8[m complete system update v3
+[33mb0eabf8[m fix photo url and upload
+[33m260f05b[m fix photo url display and drive sync
+[33m3959f7f[m update package-lock with googleapis
+[33m9bafe4a[m add google drive integration and case notes
+[33m7fef8de[m fix multiple issues
+[33me40546f[m fix password update in users route
+[33m35731cb[m fix users page responsive layout
+[33m8401537[m fix trust proxy warning
+[33m77f8690[m add case types and HR management v2
+[33m93574fa[m add dynamic case types management
+[33m4dd8333[m fix spa routing
+[33mb011593[m remove test hints final
+[33m76c9c50[m remove test accounts hint
+[33mca3a7d3[m fix cors
+[33mde2df09[m fix baseURL direct
+[33md11af43[m fix api url
+[33mfb38b8b[m fix seed.js path
+[33mfbb319b[m fix database connection
+[33mf1560f2[m fix env config for cloud
+[33m3e4a9f3[m fix migrate path
+[33m541f9d5[m add package-lock.json
+[33mb153063[m upload all files

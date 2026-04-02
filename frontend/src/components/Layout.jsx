@@ -4,10 +4,11 @@ import { useQuery } from 'react-query';
 import {
   LayoutDashboard, ClipboardList, Users, Wrench, MessageSquare,
   FileText, Shield, Database, LogOut, Bell, ChevronLeft,
-  Settings, Menu, Hammer, Tag, RefreshCw
+  Settings, Menu, Hammer, Tag, RefreshCw, FlaskConical
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import { usersAPI } from '../utils/api';
+import api from '../utils/api';
 import { useSocket } from '../hooks/useSocket';
 import { ROLE_LABELS } from '../utils/helpers';
 import toast from 'react-hot-toast';
@@ -55,6 +56,50 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  // 快速角色切換狀態
+  const [testMode, setTestMode] = useState(false);
+  const [testRoleLabel, setTestRoleLabel] = useState('');
+  const [originalToken, setOriginalToken] = useState(null);
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
+
+  const TEST_ROLES = [
+    { key: 'customer_service', label: '客服人員' },
+    { key: 'engineer',         label: '工程師' },
+    { key: 'owner',            label: '業主' },
+  ];
+
+  const switchToRole = async (roleKey, roleLabel) => {
+    try {
+      // 儲存原始管理員 token
+      const curToken = localStorage.getItem('token');
+      const res = await api.post('/auth/switch-role', { targetRole: roleKey });
+      setOriginalToken(curToken);
+      // 套用測試帳號 token
+      localStorage.setItem('token', res.data.token);
+      useAuthStore.getState().updateUser(res.data.user);
+      setTestMode(true);
+      setTestRoleLabel(roleLabel);
+      setShowRoleMenu(false);
+      toast.success(`已切換至 ${roleLabel} 測試模式`);
+      navigate('/');
+    } catch (e) {
+      toast.error(e.response?.data?.error || '切換失敗');
+    }
+  };
+
+  const restoreAdmin = () => {
+    if (!originalToken) return;
+    localStorage.setItem('token', originalToken);
+    // 重新取得管理員資料
+    api.get('/auth/me').then(r => {
+      useAuthStore.getState().updateUser(r.data);
+      setTestMode(false);
+      setTestRoleLabel('');
+      setOriginalToken(null);
+      toast.success('已返回管理員模式');
+      navigate('/');
+    }).catch(() => { logout(); navigate('/login'); });
+  };
 
   const { data: notifications, refetch: refetchNotifs } = useQuery(
     'notifications',
@@ -185,6 +230,40 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* 測試模式標示 */}
+            {testMode && (
+              <div className="flex items-center gap-2 px-2.5 py-1 bg-amber-100 border border-amber-300 rounded-lg text-xs font-medium text-amber-700">
+                <FlaskConical size={13} />
+                <span className="hidden sm:inline">測試模式 - {testRoleLabel}</span>
+                <button onClick={restoreAdmin} className="text-amber-600 hover:text-amber-800 font-semibold underline ml-1">返回管理員</button>
+              </div>
+            )}
+            {/* 快速角色切換按鈕（僅管理員可見，非測試模式下顯示）*/}
+            {user?.role === 'admin' && !testMode && (
+              <div className="relative">
+                <button
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-500 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors"
+                  onClick={() => setShowRoleMenu(v => !v)}
+                  title="快速角色切換（測試模式）">
+                  <FlaskConical size={14} />
+                  <span className="hidden sm:inline">測試模式</span>
+                </button>
+                {showRoleMenu && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowRoleMenu(false)} />
+                    <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
+                      <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-100">切換角色</div>
+                      {TEST_ROLES.map(r => (
+                        <button key={r.key} onClick={() => switchToRole(r.key, r.label)}
+                          className="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-primary-light hover:text-primary transition-colors">
+                          {r.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
             <NavLink to="/cases/new" className="btn btn-primary btn-sm hidden sm:flex">
               + 新增報修
             </NavLink>
@@ -198,17 +277,16 @@ export default function Layout() {
                 )}
               </button>
             </div>
-            <NavLink to="/profile" className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-gray-100 rounded-lg">
-              {/* P2-3：只顯示姓名，套用角色標籤顏色 */}
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium text-white flex-shrink-0 ${
-                user?.role === 'admin' ? 'bg-purple-500' :
-                user?.role === 'customer_service' ? 'bg-primary' :
-                user?.role === 'engineer' ? 'bg-teal' :
-                'bg-warning'
+            <NavLink to="/profile" className="flex items-center hover:opacity-80 transition-opacity">
+              {/* #8：圓角方框包覆全名，顏色與角色對應 */}
+              <div className={`px-2.5 py-1 rounded-md text-xs font-semibold text-white flex-shrink-0 ${
+                user?.role === 'admin'            ? 'bg-[#7C4DFF]' :
+                user?.role === 'customer_service' ? 'bg-[#E8614A]' :
+                user?.role === 'engineer'         ? 'bg-[#0F6E56]' :
+                                                    'bg-[#5B6B8A]'
               }`}>
-                {user?.name?.slice(0, 1)}
+                {user?.name}
               </div>
-              <span className="text-xs text-gray-700 hidden sm:block">{user?.name}</span>
             </NavLink>
           </div>
         </header>

@@ -350,17 +350,15 @@ export default function UserDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
+  const [hasUnsaved, setHasUnsaved] = useState(false);
   const [tab, setTab] = useState('basic');
   const [licenseModal, setLicenseModal] = useState(null);
   const [insuranceModal, setInsuranceModal] = useState(null);
 
-  const { data, isLoading } = useQuery(
-    ['hrUser', id],
-    () => hrAPI.get(id).then(r => r.data),
-    { retry: 1 }
-  );
+  const { data, isLoading } = useQuery(['hrUser', id], () => hrAPI.get(id).then(r => r.data), { retry: 1 });
 
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm({
+  const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm({
     values: data ? {
       id_number: data.id_number || '',
       birth_date: data.birth_date ? data.birth_date.slice(0,10) : '',
@@ -372,197 +370,164 @@ export default function UserDetailPage() {
     } : {}
   });
 
-  const updateProfile = useMutation(
-    (d) => hrAPI.updateProfile(id, d),
-    { onSuccess: () => { toast.success('基本資料已儲存'); qc.invalidateQueries(['hrUser', id]); } }
-  );
+  const updateProfile = useMutation((d) => hrAPI.updateProfile(id, d), {
+    onSuccess: () => {
+      toast.success('基本資料已儲存');
+      qc.invalidateQueries(['hrUser', id]);
+      setIsEditing(false);
+      setHasUnsaved(false);
+    }
+  });
 
   const uploadIdCard = async (file) => {
-    try {
-      await hrAPI.uploadIdCard(id, file);
-      toast.success('身分證影本已上傳');
-      qc.invalidateQueries(['hrUser', id]);
-    } catch {}
+    try { await hrAPI.uploadIdCard(id, file); toast.success('身分證影本已上傳'); qc.invalidateQueries(['hrUser', id]); } catch {}
   };
 
-  const deleteLicense = useMutation(
-    (lid) => hrAPI.deleteLicense(id, lid),
-    { onSuccess: () => { toast.success('證照已刪除'); qc.invalidateQueries(['hrUser', id]); } }
-  );
+  const deleteLicense = useMutation((lid) => hrAPI.deleteLicense(id, lid),
+    { onSuccess: () => { toast.success('證照已刪除'); qc.invalidateQueries(['hrUser', id]); } });
+  const deleteInsurance = useMutation((iid) => hrAPI.deleteInsurance(id, iid),
+    { onSuccess: () => { toast.success('記錄已刪除'); qc.invalidateQueries(['hrUser', id]); } });
 
-  const deleteInsurance = useMutation(
-    (iid) => hrAPI.deleteInsurance(id, iid),
-    { onSuccess: () => { toast.success('記錄已刪除'); qc.invalidateQueries(['hrUser', id]); } }
-  );
+  const handleCancelEdit = () => {
+    if (hasUnsaved && !window.confirm('尚未儲存，確定放棄修改？')) return;
+    reset(); setIsEditing(false); setHasUnsaved(false);
+  };
 
   const INS_STATUS_BADGE = { active: 'badge-success', suspended: 'badge-warning', terminated: 'badge-gray' };
   const INS_STATUS_LABEL = { active: '投保中', suspended: '暫停', terminated: '已退保' };
   const INS_TYPE_LABEL = { both: '勞保 + 健保', labor: '勞保', health: '健保' };
 
-  if (isLoading) return (
-    <div className="page-container">
-      <div className="flex items-center justify-center py-20 text-sm text-gray-400">載入中...</div>
-    </div>
-  );
-
-  if (!data) return (
-    <div className="page-container">
-      <div className="flex items-center justify-center py-20 text-sm text-danger">找不到此人員資料</div>
-    </div>
-  );
+  if (isLoading) return <div className="page-container"><div className="flex items-center justify-center py-20 text-sm text-gray-400">載入中...</div></div>;
+  if (!data) return <div className="page-container"><div className="flex items-center justify-center py-20 text-sm text-danger">找不到此人員資料</div></div>;
 
   const expiredLicenses = data.licenses?.filter(l => l.expiry_date && daysUntil(l.expiry_date) !== null && daysUntil(l.expiry_date) <= 0) || [];
   const expiringSoon = data.licenses?.filter(l => { const d = daysUntil(l.expiry_date); return d !== null && d > 0 && d <= 90; }) || [];
 
+  const tabs = [
+    { key: 'basic',     label: '基本資料',    icon: User },
+    { key: 'line',      label: 'LINE 綁定',   icon: MessageCircle },
+    { key: 'licenses',  label: `證照管理 (${data.licenses?.length || 0})`, icon: Shield },
+    { key: 'insurance', label: `勞健保記錄 (${data.insurance?.length || 0})`, icon: Briefcase },
+  ];
+
   return (
     <div className="page-container">
-      {/* Header */}
       <div className="flex items-center gap-3 mb-5">
-        <button onClick={() => navigate('/users')} className="btn btn-sm">
-          <ArrowLeft size={13} /> 返回列表
-        </button>
+        <button onClick={() => navigate('/users')} className="btn btn-sm"><ArrowLeft size={13} /> 返回列表</button>
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-11 h-11 rounded-2xl bg-primary-light flex items-center justify-center text-base font-semibold text-primary-dark flex-shrink-0">
-            {data.name?.slice(0, 2)}
-          </div>
+          <div className="w-11 h-11 rounded-2xl bg-primary-light flex items-center justify-center text-base font-semibold text-primary-dark flex-shrink-0">{data.name?.slice(0, 2)}</div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-base font-semibold text-gray-900">{data.name}</h1>
               <span className={`badge ${ROLE_BADGES[data.role]}`}>{ROLE_LABELS[data.role]}</span>
-              <span className={`badge ${data.is_active ? 'badge-success' : 'badge-gray'}`}>
-                {data.is_active ? '在職' : '停用'}
-              </span>
+              <span className={`badge ${data.is_active ? 'badge-success' : 'badge-gray'}`}>{data.is_active ? '在職' : '停用'}</span>
             </div>
-            <p className="text-xs text-gray-400 mt-0.5">{data.email}
-              {data.department && <span className="ml-2">· {data.department}</span>}
-            </p>
+            <p className="text-xs text-gray-400 mt-0.5">{data.email}{data.department && <span className="ml-2">· {data.department}</span>}</p>
           </div>
         </div>
       </div>
 
-      {/* Warnings */}
       {(expiredLicenses.length > 0 || expiringSoon.length > 0) && (
         <div className="space-y-2 mb-5">
           {expiredLicenses.map(l => (
             <div key={l.id} className="flex items-center gap-2 px-4 py-2.5 bg-danger-light border border-danger/20 rounded-xl text-sm text-danger">
-              <AlertTriangle size={15} className="flex-shrink-0" />
-              <span>證照「{l.license_name}」已於 {formatDate(l.expiry_date)} 到期，請盡快更新</span>
+              <AlertTriangle size={15} className="flex-shrink-0" /><span>證照「{l.license_name}」已於 {formatDate(l.expiry_date)} 到期，請盡快更新</span>
             </div>
           ))}
           {expiringSoon.map(l => (
             <div key={l.id} className="flex items-center gap-2 px-4 py-2.5 bg-warning-light border border-warning/20 rounded-xl text-sm text-warning">
-              <Clock size={15} className="flex-shrink-0" />
-              <span>證照「{l.license_name}」將於 {formatDate(l.expiry_date)} 到期（剩 {daysUntil(l.expiry_date)} 天）</span>
+              <Clock size={15} className="flex-shrink-0" /><span>證照「{l.license_name}」將於 {formatDate(l.expiry_date)} 到期（剩 {daysUntil(l.expiry_date)} 天）</span>
             </div>
           ))}
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="flex gap-0 mb-5 border-b border-gray-100">
-        {[
-          { key: 'basic', label: '基本資料', icon: User },
-          { key: 'licenses', label: `證照管理 (${data.licenses?.length || 0})`, icon: Shield },
-          { key: 'insurance', label: `勞健保記錄 (${data.insurance?.length || 0})`, icon: Briefcase },
-        ].map(t => (
+      <div className="flex gap-0 mb-5 border-b border-gray-100 overflow-x-auto">
+        {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 transition-colors ${tab === t.key ? 'border-primary text-primary font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-            <t.icon size={14} />
-            {t.label}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 transition-colors whitespace-nowrap ${tab === t.key ? 'border-primary text-primary font-medium' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
+            <t.icon size={14} />{t.label}
           </button>
         ))}
       </div>
 
-      {/* ── 基本資料 ── */}
       {tab === 'basic' && (
-        <form onSubmit={handleSubmit(d => updateProfile.mutate(d))}>
+        <form onSubmit={handleSubmit(d => updateProfile.mutate(d))} onChange={() => setHasUnsaved(true)}>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs text-gray-400">{isEditing ? '編輯模式 — 修改完成後請按「儲存」' : '唯讀模式 — 點擊「修改」才可編輯'}</p>
+            <div className="flex gap-2">
+              {isEditing ? (
+                <>
+                  <button type="button" className="btn btn-sm" onClick={handleCancelEdit}>取消</button>
+                  <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-sm">{isSubmitting ? '儲存中...' : '儲存'}</button>
+                </>
+              ) : (
+                <button type="button" className="btn btn-sm btn-primary gap-1" onClick={() => setIsEditing(true)}>
+                  <Edit2 size={13} /> 修改
+                </button>
+              )}
+            </div>
+          </div>
           <div className="grid md:grid-cols-2 gap-5">
             <div className="card card-body space-y-4">
-              <h3 className="font-medium text-sm text-gray-700 flex items-center gap-2">
-                <User size={14} className="text-gray-400" /> 個人資料
-              </h3>
+              <h3 className="font-medium text-sm text-gray-700 flex items-center gap-2"><User size={14} className="text-gray-400" /> 個人資料</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="form-label">身分證字號</label>
-                  <input {...register('id_number')} className="form-control" placeholder="A123456789" maxLength={10} />
+                  {isEditing ? <input {...register('id_number')} className="form-control" placeholder="A123456789" maxLength={10} /> : <div className="form-control bg-gray-50 text-gray-700">{data.id_number || '--'}</div>}
                 </div>
                 <div>
                   <label className="form-label">出生日期</label>
-                  <input {...register('birth_date')} type="date" className="form-control" />
+                  {isEditing ? <input {...register('birth_date')} type="date" className="form-control" /> : <div className="form-control bg-gray-50 text-gray-700">{data.birth_date ? data.birth_date.slice(0,10) : '--'}</div>}
                 </div>
               </div>
               <div>
                 <label className="form-label">戶籍/通訊地址</label>
-                <input {...register('address')} className="form-control" placeholder="完整地址" />
+                {isEditing ? <input {...register('address')} className="form-control" placeholder="完整地址" /> : <div className="form-control bg-gray-50 text-gray-700">{data.address || '--'}</div>}
               </div>
               <div>
                 <label className="form-label">身分證影本</label>
-                <FileUploadBtn
-                  label="上傳身分證正面"
-                  accept="image/*,application/pdf"
-                  onFileChange={uploadIdCard}
-                  currentUrl={data.id_card_url}
-                  fileName="查看身分證影本"
-                />
-                <p className="text-xs text-gray-400 mt-1">支援 JPG、PNG、PDF，最大 10MB</p>
+                <FileUploadBtn label="上傳身分證正面" accept="image/*,application/pdf" onFileChange={uploadIdCard} currentUrl={data.id_card_url} fileName="查看身分證影本" />
               </div>
             </div>
-
             <div className="card card-body space-y-4">
-              <h3 className="font-medium text-sm text-gray-700 flex items-center gap-2">
-                <Briefcase size={14} className="text-gray-400" /> 職務資料
-              </h3>
+              <h3 className="font-medium text-sm text-gray-700 flex items-center gap-2"><Briefcase size={14} className="text-gray-400" /> 職務資料</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="form-label">部門</label>
-                  <input {...register('department')} className="form-control" placeholder="工程部" />
+                  {isEditing ? <input {...register('department')} className="form-control" placeholder="工程部" /> : <div className="form-control bg-gray-50 text-gray-700">{data.department || '--'}</div>}
                 </div>
                 <div>
                   <label className="form-label">到職日期</label>
-                  <input {...register('hire_date')} type="date" className="form-control" />
+                  {isEditing ? <input {...register('hire_date')} type="date" className="form-control" /> : <div className="form-control bg-gray-50 text-gray-700">{data.hire_date ? data.hire_date.slice(0,10) : '--'}</div>}
                 </div>
               </div>
-
-              <h3 className="font-medium text-sm text-gray-700 flex items-center gap-2 pt-2 border-t border-gray-100">
-                <Phone size={14} className="text-gray-400" /> 緊急聯絡人
-              </h3>
+              <h3 className="font-medium text-sm text-gray-700 flex items-center gap-2 pt-2 border-t border-gray-100"><Phone size={14} className="text-gray-400" /> 緊急聯絡人</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="form-label">聯絡人姓名</label>
-                  <input {...register('emergency_contact')} className="form-control" placeholder="姓名" />
+                  {isEditing ? <input {...register('emergency_contact')} className="form-control" placeholder="姓名" /> : <div className="form-control bg-gray-50 text-gray-700">{data.emergency_contact || '--'}</div>}
                 </div>
                 <div>
                   <label className="form-label">聯絡電話</label>
-                  <input {...register('emergency_phone')} className="form-control" placeholder="0912-345-678" />
+                  {isEditing ? <input {...register('emergency_phone')} className="form-control" placeholder="0912-345-678" /> : <div className="form-control bg-gray-50 text-gray-700">{data.emergency_phone || '--'}</div>}
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="flex justify-end mt-5">
-            <button type="submit" disabled={isSubmitting} className="btn btn-primary btn-lg">
-              {isSubmitting ? '儲存中...' : '儲存基本資料'}
-            </button>
           </div>
         </form>
       )}
 
-      {/* ── 證照管理 ── */}
+      {tab === 'line' && <LineBindAdmin userId={id} userName={data?.user?.name || data?.name || ''} />}
+
       {tab === 'licenses' && (
         <div>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs text-gray-400">管理此人員所持有的專業證照，可上傳證照影像</p>
-            <button className="btn btn-primary" onClick={() => setLicenseModal('new')}>
-              <Plus size={14} /> 新增證照
-            </button>
+            <p className="text-xs text-gray-400">管理此人員所持有的專業證照</p>
+            <button className="btn btn-primary" onClick={() => setLicenseModal('new')}><Plus size={14} /> 新增證照</button>
           </div>
-
           {!data.licenses?.length ? (
-            <div className="card card-body text-center py-16">
-              <Shield size={32} className="text-gray-200 mx-auto mb-3" />
-              <p className="text-sm text-gray-400">尚未新增任何證照</p>
-              <button className="btn btn-sm mt-3 mx-auto" onClick={() => setLicenseModal('new')}>+ 新增第一張證照</button>
-            </div>
+            <div className="card card-body text-center py-16"><Shield size={32} className="text-gray-200 mx-auto mb-3" /><p className="text-sm text-gray-400">尚未新增任何證照</p></div>
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {data.licenses.map(lic => {
@@ -579,34 +544,14 @@ export default function UserDetailPage() {
                       </div>
                       <div className="flex gap-1 flex-shrink-0 ml-2">
                         <button className="btn btn-sm px-2" onClick={() => setLicenseModal(lic)}><Edit2 size={12} /></button>
-                        <button className="btn btn-sm px-2 hover:bg-danger-light hover:text-danger"
-                          onClick={() => { if (window.confirm(`確定刪除「${lic.license_name}」？`)) deleteLicense.mutate(lic.id); }}>
-                          <Trash2 size={12} />
-                        </button>
+                        <button className="btn btn-sm px-2 hover:bg-danger-light hover:text-danger" onClick={() => { if (window.confirm(`確定刪除「${lic.license_name}」？`)) deleteLicense.mutate(lic.id); }}><Trash2 size={12} /></button>
                       </div>
                     </div>
-
                     <div className="flex gap-4 text-xs text-gray-500 flex-wrap">
                       {lic.issue_date && <span>發證：{formatDate(lic.issue_date)}</span>}
-                      {lic.expiry_date && (
-                        <span className={`font-medium ${isExpired ? 'text-danger' : isSoon ? 'text-warning' : 'text-gray-500'}`}>
-                          到期：{formatDate(lic.expiry_date)}
-                          {isExpired && ' ⚠️ 已過期'}
-                          {isSoon && ` ⏰ 剩 ${days} 天`}
-                        </span>
-                      )}
+                      {lic.expiry_date && <span className={`font-medium ${isExpired ? 'text-danger' : isSoon ? 'text-warning' : 'text-gray-500'}`}>到期：{formatDate(lic.expiry_date)}{isExpired && ' ⚠️ 已過期'}{isSoon && ` ⏰ 剩 ${days} 天`}</span>}
                     </div>
-
-                    {lic.notes && <div className="text-xs text-gray-400 mt-1">備註：{lic.notes}</div>}
-
-                    {lic.file_url ? (
-                      <a href={lic.file_url} target="_blank" rel="noopener noreferrer"
-                        className="mt-2 text-xs text-primary hover:underline flex items-center gap-1">
-                        <FileText size={11} /> 查看證照影像
-                      </a>
-                    ) : (
-                      <div className="mt-2 text-xs text-gray-300">尚未上傳影像</div>
-                    )}
+                    {lic.file_url ? <a href={lic.file_url} target="_blank" rel="noopener noreferrer" className="mt-2 text-xs text-primary hover:underline flex items-center gap-1"><FileText size={11} /> 查看證照影像</a> : <div className="mt-2 text-xs text-gray-300">尚未上傳影像</div>}
                   </div>
                 );
               })}
@@ -615,22 +560,14 @@ export default function UserDetailPage() {
         </div>
       )}
 
-      {/* ── 勞健保記錄 ── */}
       {tab === 'insurance' && (
         <div>
           <div className="flex items-center justify-between mb-4">
             <p className="text-xs text-gray-400">記錄此人員的勞保、健保投保狀態與歷史</p>
-            <button className="btn btn-primary" onClick={() => setInsuranceModal('new')}>
-              <Plus size={14} /> 新增保險記錄
-            </button>
+            <button className="btn btn-primary" onClick={() => setInsuranceModal('new')}><Plus size={14} /> 新增保險記錄</button>
           </div>
-
           {!data.insurance?.length ? (
-            <div className="card card-body text-center py-16">
-              <Briefcase size={32} className="text-gray-200 mx-auto mb-3" />
-              <p className="text-sm text-gray-400">尚未新增保險記錄</p>
-              <button className="btn btn-sm mt-3 mx-auto" onClick={() => setInsuranceModal('new')}>+ 新增保險記錄</button>
-            </div>
+            <div className="card card-body text-center py-16"><Briefcase size={32} className="text-gray-200 mx-auto mb-3" /><p className="text-sm text-gray-400">尚未新增保險記錄</p></div>
           ) : (
             <div className="space-y-3">
               {data.insurance.map(ins => (
@@ -647,20 +584,10 @@ export default function UserDetailPage() {
                         {ins.insured_salary && <div>投保薪資：${Number(ins.insured_salary).toLocaleString()}</div>}
                         {ins.insurer_name && <div>投保單位：{ins.insurer_name}</div>}
                       </div>
-                      {ins.notes && <div className="text-xs text-gray-400 mt-1">備註：{ins.notes}</div>}
-                      {ins.proof_url && (
-                        <a href={ins.proof_url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs text-primary hover:underline flex items-center gap-1 mt-2">
-                          <FileText size={11} /> 查看投保證明
-                        </a>
-                      )}
                     </div>
                     <div className="flex gap-1 flex-shrink-0 ml-3">
                       <button className="btn btn-sm px-2" onClick={() => setInsuranceModal(ins)}><Edit2 size={12} /></button>
-                      <button className="btn btn-sm px-2 hover:bg-danger-light hover:text-danger"
-                        onClick={() => { if (window.confirm('確定刪除此保險記錄？')) deleteInsurance.mutate(ins.id); }}>
-                        <Trash2 size={12} />
-                      </button>
+                      <button className="btn btn-sm px-2 hover:bg-danger-light hover:text-danger" onClick={() => { if (window.confirm('確定刪除此保險記錄？')) deleteInsurance.mutate(ins.id); }}><Trash2 size={12} /></button>
                     </div>
                   </div>
                 </div>
@@ -670,26 +597,8 @@ export default function UserDetailPage() {
         </div>
       )}
 
-      {/* LINE 綁定管理 */}
-      <LineBindAdmin userId={id} userName={data?.user?.name || ''} />
-
-      {/* Modals */}
-      {licenseModal && (
-        <LicenseModal
-          userId={id}
-          license={licenseModal === 'new' ? null : licenseModal}
-          onClose={() => setLicenseModal(null)}
-          onSuccess={() => { setLicenseModal(null); qc.invalidateQueries(['hrUser', id]); }}
-        />
-      )}
-      {insuranceModal && (
-        <InsuranceModal
-          userId={id}
-          record={insuranceModal === 'new' ? null : insuranceModal}
-          onClose={() => setInsuranceModal(null)}
-          onSuccess={() => { setInsuranceModal(null); qc.invalidateQueries(['hrUser', id]); }}
-        />
-      )}
+      {licenseModal && <LicenseModal userId={id} license={licenseModal === 'new' ? null : licenseModal} onClose={() => setLicenseModal(null)} onSuccess={() => { setLicenseModal(null); qc.invalidateQueries(['hrUser', id]); }} />}
+      {insuranceModal && <InsuranceModal userId={id} record={insuranceModal === 'new' ? null : insuranceModal} onClose={() => setInsuranceModal(null)} onSuccess={() => { setInsuranceModal(null); qc.invalidateQueries(['hrUser', id]); }} />}
     </div>
   );
 }

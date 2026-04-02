@@ -21,10 +21,11 @@ const storage = {
 
 function DEFAULT_ROLES() {
   return [
+    // #11：客服/工程師/業主改為系統內建（editable: false）
     { key: 'admin',            label: '系統管理員', color: 'purple', modules: ['cases','photos','finance','notes','dispatch','users','settings'], editable: false },
-    { key: 'customer_service', label: '客服人員',   color: 'blue',   modules: ['cases','photos','finance','notes','dispatch'], editable: true },
-    { key: 'engineer',         label: '工程師',     color: 'teal',   modules: ['cases','photos','notes'], editable: true },
-    { key: 'owner',            label: '業主',       color: 'gray',   modules: ['cases'], editable: true },
+    { key: 'customer_service', label: '客服人員',   color: 'blue',   modules: ['cases','photos','finance','notes','dispatch'], editable: false },
+    { key: 'engineer',         label: '工程師',     color: 'teal',   modules: ['cases','photos','notes'], editable: false },
+    { key: 'owner',            label: '業主',       color: 'gray',   modules: ['cases'], editable: false },
   ];
 }
 
@@ -242,67 +243,28 @@ function RoleEditModal({ role, onClose, onSave }) {
             </div>
           </div>
 
-          {/* 功能模組與權限設定 */}
+          {/* #12：功能模組開關控制左欄顯示；#13：移除修改/刪除標籤 */}
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">功能模組與操作權限</h3>
-              <span className="text-xs text-gray-400">（開啟模組後可設定修改/刪除權限）</span>
+              <h3 className="text-sm font-semibold text-gray-700">功能模組</h3>
+              <span className="text-xs text-gray-400">（開關控制該角色登入後左欄的顯示/隱藏）</span>
             </div>
 
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
               {ALL_MODULES.map(mod => {
                 const enabled = modules.includes(mod.key);
-                const perms = permissions[mod.key]?.[role.key] || { edit: false, delete: false };
-
                 return (
-                  <div key={mod.key} className={`rounded-xl border-2 transition-all ${enabled ? 'border-primary/30 bg-blue-50/30' : 'border-gray-100 bg-gray-50'}`}>
-                    <div className="flex items-center justify-between px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {/* Module toggle */}
-                        <div
-                          className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors flex-shrink-0 ${enabled ? 'bg-primary' : 'bg-gray-300'}`}
-                          onClick={() => toggleModule(mod.key)}
-                        >
-                          <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-sm text-gray-900">{mod.label}</div>
-                          <div className="text-xs text-gray-500">{mod.desc}</div>
-                        </div>
-                      </div>
-
-                      {/* Permission buttons */}
-                      {enabled && (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => togglePerm(mod.key, 'edit')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
-                              perms.edit
-                                ? 'bg-primary text-white border-primary'
-                                : 'bg-white text-gray-500 border-gray-200 hover:border-primary'
-                            }`}
-                          >
-                            {perms.edit && <Check size={13} />} 修改
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => perms.edit && togglePerm(mod.key, 'delete')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all ${
-                              perms.delete
-                                ? 'bg-danger text-white border-danger'
-                                : perms.edit
-                                  ? 'bg-white text-gray-500 border-gray-200 hover:border-danger'
-                                  : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
-                            }`}
-                          >
-                            {perms.delete && <Check size={13} />} 刪除
-                          </button>
-                        </div>
-                      )}
-                      {!enabled && (
-                        <span className="text-sm text-gray-400 italic">無存取權限</span>
-                      )}
+                  <div key={mod.key}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 cursor-pointer transition-all select-none
+                      ${enabled ? 'border-primary/40 bg-primary-light' : 'border-gray-100 bg-gray-50 hover:border-gray-200'}`}
+                    onClick={() => toggleModule(mod.key)}>
+                    {/* #12：Toggle 開關 */}
+                    <div className={`w-10 h-5 rounded-full relative flex-shrink-0 transition-colors ${enabled ? 'bg-primary' : 'bg-gray-300'}`}>
+                      <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className={`text-sm font-medium ${enabled ? 'text-primary' : 'text-gray-500'}`}>{mod.label}</div>
+                      <div className="text-xs text-gray-400 truncate">{mod.desc}</div>
                     </div>
                   </div>
                 );
@@ -376,21 +338,20 @@ function RoleSettings() {
         </button>
       </div>
 
-      {/* P5-3：角色總覽表 + P5-4：色彩重新調和 */}
+      {/* #11：類型欄移至名稱前 + #11：四個系統內建角色統一顯示「系統內建」*/}
       <div className="card overflow-hidden">
         <table className="table-base">
           <thead>
             <tr>
+              <th>類型</th>
               <th>角色名稱</th>
               <th>標籤顏色</th>
-              <th>類型</th>
               <th>操作</th>
             </tr>
           </thead>
           <tbody>
             {roles.map(role => {
-              const isAdmin = role.key === 'admin';
-              // P5-4：色彩重新調和（基於 #E8614A，排除狀態色）
+              const isBuiltIn = !role.editable;
               const ROLE_TAG_COLORS = {
                 admin:            { text: 'text-[#7C4DFF]', bg: 'bg-[#EDE7FF]' },
                 customer_service: { text: 'text-[#E8614A]', bg: 'bg-[#FFF0EC]' },
@@ -400,6 +361,13 @@ function RoleSettings() {
               const tagColor = ROLE_TAG_COLORS[role.key] || getColor(role.color);
               return (
                 <tr key={role.key}>
+                  <td>
+                    {/* #11：系統內建角色（admin/customer_service/engineer/owner）均顯示系統內建 */}
+                    {isBuiltIn
+                      ? <span className="text-xs text-purple-500 bg-purple-50 px-2 py-1 rounded-full">系統內建</span>
+                      : <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">自訂</span>
+                    }
+                  </td>
                   <td>
                     <span className={`px-3 py-1 rounded-full text-sm font-semibold ${tagColor.bg} ${tagColor.text}`}>
                       {role.label}
@@ -413,21 +381,14 @@ function RoleSettings() {
                     </div>
                   </td>
                   <td>
-                    {isAdmin
-                      ? <span className="text-xs text-purple-500 bg-purple-50 px-2 py-1 rounded-full">系統內建</span>
-                      : <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full">自訂</span>
-                    }
-                  </td>
-                  <td>
                     <div className="flex gap-1">
                       <button className="btn btn-sm gap-1.5" onClick={() => setEditingRole(role)}>
                         <Edit2 size={13} /> 編輯
                       </button>
-                      {role.editable && !isAdmin && (
-                        <button
-                          className="btn btn-sm text-danger border-red-200 hover:bg-red-50"
-                          onClick={() => onDeleteRole(role.key)}
-                        >
+                      {/* 僅自訂角色可刪除，系統內建不顯示刪除按鈕 */}
+                      {!isBuiltIn && (
+                        <button className="btn btn-sm text-danger border-red-200 hover:bg-red-50"
+                          onClick={() => onDeleteRole(role.key)}>
                           <Trash2 size={13} />
                         </button>
                       )}
