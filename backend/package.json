@@ -1,6 +1,6 @@
 {
   "name": "repair-system-backend",
-  "version": "1.0.0",
+  "version": "1.10.1",
   "description": "Engineering Repair Management System - Backend API",
   "main": "src/index.js",
   "scripts": {

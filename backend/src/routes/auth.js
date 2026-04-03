@@ -227,33 +227,29 @@ router.get('/google/callback', asyncHandler(async (req, res) => {
   res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?token=${token}&redirect=${encodeURIComponent(redirectPath)}`);
 }));
 
-module.exports = router;
-
 // ── 快速角色切換 API（測試模式，僅管理員可用）────────────────
 router.post('/switch-role', authenticate, asyncHandler(async (req, res) => {
-  // 只有管理員才能使用此功能
-  if (req.user.role !== 'admin') return res.status(403).json({ error: '僅限管理員使用' });
+  if (req.user.role !== 'admin')
+    return res.status(403).json({ error: '僅限管理員使用' });
 
   const { targetRole } = req.body;
-  if (!targetRole) return res.status(400).json({ error: '請指定目標角色' });
+  if (!targetRole)
+    return res.status(400).json({ error: '請指定目標角色' });
 
-  // 尋找對應角色的測試帳號
   const result = await query(
-    `SELECT id, name, email, role, is_active FROM users WHERE email = $1 AND is_active = true LIMIT 1`,
+    `SELECT id, name, email, role, is_active FROM users
+     WHERE email = $1 AND is_active = true LIMIT 1`,
     [`test_${targetRole}@pro080.com`]
   );
 
-  if (!result.rows.length) {
-    return res.status(404).json({ error: `找不到 ${targetRole} 的測試帳號，請先建立 test_${targetRole}@pro080.com` });
-  }
+  if (!result.rows.length)
+    return res.status(404).json({
+      error: `找不到測試帳號 test_${targetRole}@pro080.com，請先在人員管理中建立`
+    });
 
   const testUser = result.rows[0];
   const token = makeToken(testUser.id, testUser.role);
-
-  res.json({
-    token,
-    user: safeUser(testUser),
-    testMode: true,
-    originalAdminId: req.user.userId,
-  });
+  res.json({ token, user: safeUser(testUser), testMode: true });
 }));
+
+module.exports = router;
