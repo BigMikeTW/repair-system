@@ -236,16 +236,37 @@ router.post('/switch-role', authenticate, asyncHandler(async (req, res) => {
   if (!targetRole)
     return res.status(400).json({ error: '請指定目標角色' });
 
-  const result = await query(
+  const email = `test_${targetRole}@pro080.com`;
+
+  // 先查找測試帳號，找不到就自動建立
+  let result = await query(
     `SELECT id, name, email, role, is_active FROM users
-     WHERE email = $1 AND is_active = true LIMIT 1`,
-    [`test_${targetRole}@pro080.com`]
+     WHERE email = $1 LIMIT 1`,
+    [email]
   );
 
-  if (!result.rows.length)
-    return res.status(404).json({
-      error: `找不到測試帳號 test_${targetRole}@pro080.com，請先在人員管理中建立`
-    });
+  if (!result.rows.length) {
+    // 自動建立測試帳號
+    const ROLE_NAMES = {
+      customer_service: '測試客服人員',
+      engineer: '測試工程師',
+      owner: '測試業主',
+    };
+    const name = ROLE_NAMES[targetRole] || `測試${targetRole}`;
+    const hashed = await bcrypt.hash('TestAccount@123', 10);
+    result = await query(
+      `INSERT INTO users (name, email, password, role, is_active)
+       VALUES ($1, $2, $3, $4, true) RETURNING id, name, email, role, is_active`,
+      [name, email, hashed, targetRole]
+    );
+  } else if (!result.rows[0].is_active) {
+    // 帳號存在但被停用，重新啟用
+    result = await query(
+      `UPDATE users SET is_active = true WHERE email = $1
+       RETURNING id, name, email, role, is_active`,
+      [email]
+    );
+  }
 
   const testUser = result.rows[0];
   const token = makeToken(testUser.id, testUser.role);

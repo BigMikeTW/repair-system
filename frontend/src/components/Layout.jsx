@@ -17,37 +17,46 @@ const navConfig = [
   {
     section: '主要功能',
     items: [
-      { to: '/', icon: LayoutDashboard, label: '總覽儀表板', roles: ['admin','customer_service','engineer','owner'] },
-      { to: '/cases', icon: ClipboardList, label: '案件管理', roles: ['admin','customer_service','engineer','owner'] },
-      { to: '/dispatch', icon: Users, label: '派工管理', roles: ['admin','customer_service'] },
-      { to: '/field', icon: Wrench, label: '現場作業', roles: ['engineer'] },
+      { to: '/', icon: LayoutDashboard, label: '總覽儀表板', roles: ['admin','customer_service','engineer','owner'], moduleKey: null },
+      { to: '/cases', icon: ClipboardList, label: '案件管理', roles: ['admin','customer_service','engineer','owner'], moduleKey: 'cases' },
+      { to: '/dispatch', icon: Users, label: '派工管理', roles: ['admin','customer_service'], moduleKey: 'dispatch' },
+      { to: '/field', icon: Wrench, label: '現場作業', roles: ['engineer'], moduleKey: 'field' },
     ]
   },
   {
     section: '客服',
     items: [
-      { to: '/chat',      icon: MessageSquare, label: '線上客服', roles: ['admin','customer_service','owner'] },
-      { to: '/case-chat', icon: MessageSquare, label: '案件溝通', roles: ['admin','customer_service','engineer'] },
+      { to: '/chat',      icon: MessageSquare, label: '線上客服', roles: ['admin','customer_service','owner'], moduleKey: 'chat' },
+      { to: '/case-chat', icon: MessageSquare, label: '案件溝通', roles: ['admin','customer_service','engineer'], moduleKey: 'chat' },
     ]
   },
   {
     section: '帳務管理',
     items: [
-      { to: '/finance', icon: FileText, label: '帳務管理', roles: ['admin','customer_service'] },
+      { to: '/finance', icon: FileText, label: '帳務管理', roles: ['admin','customer_service'], moduleKey: 'finance' },
     ]
   },
   {
     section: '系統管理',
     items: [
-      { to: '/users', icon: Shield, label: '人員管理', roles: ['admin'] },
-      { to: '/settings', icon: Settings, label: '功能設定', roles: ['admin'] },
-      { to: '/permissions', icon: Shield, label: '權限設定', roles: ['admin'] },
-      { to: '/case-types', icon: Tag, label: '報修類型', roles: ['admin','customer_service'] },
-      { to: '/backup', icon: Database, label: '備份記錄', roles: ['admin'] },
-      { to: '/init', icon: RefreshCw, label: '初始設定', roles: ['admin'] },
+      { to: '/users', icon: Shield, label: '人員管理', roles: ['admin'], moduleKey: 'users' },
+      { to: '/settings', icon: Settings, label: '功能設定', roles: ['admin'], moduleKey: 'settings' },
+      { to: '/permissions', icon: Shield, label: '權限設定', roles: ['admin'], moduleKey: 'settings' },
+      { to: '/case-types', icon: Tag, label: '報修類型', roles: ['admin','customer_service'], moduleKey: 'casetypes' },
+      { to: '/backup', icon: Database, label: '備份記錄', roles: ['admin'], moduleKey: 'backup' },
+      { to: '/init', icon: RefreshCw, label: '初始設定', roles: ['admin'], moduleKey: 'settings' },
     ]
   }
 ];
+
+// 從 localStorage 讀取角色的模組設定
+const getRoleModules = (roleKey) => {
+  try {
+    const roles = JSON.parse(localStorage.getItem('custom_roles') || '[]');
+    const role = roles.find(r => r.key === roleKey);
+    return role?.modules || null;
+  } catch { return null; }
+};
 
 export default function Layout() {
   const { user, logout } = useAuthStore();
@@ -139,10 +148,25 @@ export default function Layout() {
     navigate('/login');
   };
 
-  const visibleNav = navConfig.map(section => ({
-    ...section,
-    items: section.items.filter(item => item.roles.includes(user?.role))
-  })).filter(s => s.items.length > 0);
+  const visibleNav = (() => {
+    const roleKey = user?.role;
+    const roleModules = getRoleModules(roleKey); // null = no custom setting
+    return navConfig.map(section => ({
+      ...section,
+      items: section.items.filter(item => {
+        // Step 1: 基本 role 檢查
+        if (!item.roles.includes(roleKey)) return false;
+        // Step 2: admin 永遠全部顯示
+        if (roleKey === 'admin') return true;
+        // Step 3: 無 moduleKey 的項目（總覽儀表板）永遠顯示
+        if (!item.moduleKey) return true;
+        // Step 4: 有自訂模組設定時，依設定過濾
+        if (roleModules !== null) return roleModules.includes(item.moduleKey);
+        // Step 5: 無自訂設定，使用預設 roles 陣列
+        return true;
+      })
+    })).filter(s => s.items.length > 0);
+  })();
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full">

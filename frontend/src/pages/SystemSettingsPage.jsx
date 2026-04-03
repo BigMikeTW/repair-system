@@ -9,8 +9,16 @@ const storage = {
   saveBankAccounts: (v) => localStorage.setItem('default_bank_accounts', JSON.stringify(v)),
   getRoles: () => {
     try {
+      const defaults = DEFAULT_ROLES();
+      const defaultKeys = defaults.map(r => r.key);
       const s = localStorage.getItem('custom_roles');
-      if (s) return JSON.parse(s);
+      if (s) {
+        const saved = JSON.parse(s);
+        // 合併：預設角色（admin/customer_service/engineer/owner）一律用最新 DEFAULT_ROLES 覆蓋
+        // 自訂角色（非預設 key）才保留，且必須有 editable:true 才視為自訂
+        const customs = saved.filter(r => !defaultKeys.includes(r.key) && r.editable !== false);
+        return [...defaults, ...customs];
+      }
     } catch {}
     return DEFAULT_ROLES();
   },
@@ -22,21 +30,25 @@ const storage = {
 function DEFAULT_ROLES() {
   return [
     // #11：客服/工程師/業主改為系統內建（editable: false）
-    { key: 'admin',            label: '系統管理員', color: 'purple', modules: ['cases','photos','finance','notes','dispatch','users','settings'], editable: false },
-    { key: 'customer_service', label: '客服人員',   color: 'blue',   modules: ['cases','photos','finance','notes','dispatch'], editable: false },
-    { key: 'engineer',         label: '工程師',     color: 'teal',   modules: ['cases','photos','notes'], editable: false },
-    { key: 'owner',            label: '業主',       color: 'gray',   modules: ['cases'], editable: false },
+    { key: 'admin',            label: '系統管理員', color: 'purple', type: 'system', modules: ['cases','dispatch','field','chat','finance','photos','notes','users','settings','casetypes','backup'], editable: false },
+    { key: 'customer_service', label: '客服人員',   color: 'blue',   type: 'system', modules: ['cases','dispatch','chat','finance','photos','notes','casetypes'], editable: false },
+    { key: 'engineer',         label: '工程師',     color: 'teal',   type: 'system', modules: ['cases','field','chat','photos','notes'], editable: false },
+    { key: 'owner',            label: '業主',       color: 'gray',   type: 'system', modules: ['cases','chat'], editable: false },
   ];
 }
 
 const ALL_MODULES = [
   { key: 'cases',    label: '案件管理',   desc: '案件建立、查看、追蹤' },
   { key: 'dispatch', label: '派工管理',   desc: '派工、取消、重新指派' },
+  { key: 'field',    label: '現場作業',   desc: '工程師現場打卡與施工記錄' },
+  { key: 'chat',     label: '客服對話',   desc: '線上客服與案件溝通' },
   { key: 'finance',  label: '帳務管理',   desc: '報價單、結案單、請款單、收款單' },
   { key: 'photos',   label: '照片記錄',   desc: '施工照片上傳與管理' },
   { key: 'notes',    label: '案件記錄',   desc: '現場施工記錄' },
   { key: 'users',    label: '人員管理',   desc: '人員帳號與 HR 資料' },
   { key: 'settings', label: '系統設定',   desc: '功能設定與角色管理' },
+  { key: 'casetypes',label: '報修類型',   desc: '報修類型管理與排序' },
+  { key: 'backup',   label: '備份記錄',   desc: '系統備份與資料記錄' },
 ];
 
 const COLOR_OPTIONS = [
