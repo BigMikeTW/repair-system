@@ -19,14 +19,14 @@ const safeUser = (u) => {
 
 // ── 一般登入 ─────────────────────────────────────────────────
 router.post('/login', [
-  body('email').isEmail().normalizeEmail(),
+  body('email').isEmail().toLowerCase(),
   body('password').notEmpty()
 ], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
   const { email, password } = req.body;
-  const result = await query('SELECT * FROM users WHERE email = $1 AND is_active = true', [email]);
+  const result = await query('SELECT * FROM users WHERE LOWER(email) = LOWER($1) AND is_active = true', [email]);
   if (!result.rows.length) return res.status(401).json({ error: '帳號或密碼錯誤' });
 
   const user = result.rows[0];
@@ -40,14 +40,14 @@ router.post('/login', [
 // ── 一般註冊 ─────────────────────────────────────────────────
 router.post('/register', [
   body('name').trim().notEmpty().withMessage('姓名必填'),
-  body('email').isEmail().normalizeEmail().withMessage('Email 格式不正確'),
+  body('email').isEmail().toLowerCase().withMessage('Email 格式不正確'),
   body('password').isLength({ min: 8 }).withMessage('密碼至少 8 碼'),
 ], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
   const { name, email, password, phone } = req.body;
-  const exists = await query('SELECT id FROM users WHERE email = $1', [email]);
+  const exists = await query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email]);
   if (exists.rows.length) return res.status(409).json({ error: 'Email 已被使用' });
 
   const hashed = await bcrypt.hash(password, 12);

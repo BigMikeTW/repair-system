@@ -89,7 +89,7 @@ const generateClosurePdf = async (c, notes) => {
     doc.font('Helvetica').fontSize(9);
     doc.text(`簽收人：${c.signed_by || '--'}`);
     doc.text(`簽收時間：${new Date(c.signed_at).toLocaleString('zh-TW')}`);
-    if (c.completion_notes) doc.text(`備注：${c.completion_notes}`);
+    if (c.completion_notes) doc.text(`備註：${c.completion_notes}`);
 
     // 嵌入簽名圖片
     if (c.owner_signature && c.owner_signature.startsWith('data:image')) {

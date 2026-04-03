@@ -28,7 +28,10 @@ export default function LoginPage() {
       login(res.data.token, res.data.user);
       toast.success(`歡迎回來，${res.data.user.name}！`);
       navigate('/');
-    } catch {}
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || '登入失敗，請稍後再試';
+      toast.error(msg);
+    }
   };
 
   const handleLineLogin = () => {

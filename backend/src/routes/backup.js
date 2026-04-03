@@ -66,7 +66,7 @@ router.get('/export/cases', authenticate, authorize('admin','customer_service'),
   `, params);
 
   // Build CSV
-  const headers = ['案件編號','標題','類型','緊急度','狀態','業主公司','聯絡人','電話','地址','工程師','建立時間','開工時間','完工時間','備注'];
+  const headers = ['案件編號','標題','類型','緊急度','狀態','業主公司','聯絡人','電話','地址','工程師','建立時間','開工時間','完工時間','備註'];
   const rows = result.rows.map(r => [
     r.case_number, r.title, r.case_type, r.urgency, r.status,
     r.owner_company || '', r.owner_name || '', r.owner_phone || '', r.location_address || '',
